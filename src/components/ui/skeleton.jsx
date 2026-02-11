@@ -6,8 +6,11 @@ function Skeleton({
 }) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-primary/10", className)}
-      {...props} />
+      className={cn("rounded-md bg-zinc-800 relative overflow-hidden", className)}
+      {...props}
+    >
+      <div className="skeleton-shimmer" />
+    </div>
   );
 }
 

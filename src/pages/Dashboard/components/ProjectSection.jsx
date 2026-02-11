@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../../../components/ui/dialog";
-import { RefreshCw, User } from "lucide-react";
+import { Plus, User, FolderOpen, Check } from "lucide-react";
 import {
   useGetAllProjects,
   useCreateProject,
@@ -19,6 +19,7 @@ import { useUser } from "../../../store/auth.store";
 import { useToast } from "../../../hooks/use-toast";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Skeleton } from "../../../components/ui/skeleton";
 
 export default function ProjectSection({
   sectionRef,
@@ -94,7 +95,7 @@ export default function ProjectSection({
       return;
     }
     try {
-      await createProject({
+      const result = await createProject({
         projectName: name,
         actorId: pendingActorId,
       });
@@ -103,6 +104,11 @@ export default function ProjectSection({
         description: "Your project has been created.",
       });
       resetCreateFlow();
+      // Auto-select the newly created project
+      const newProjectId = result?.data?.id;
+      if (newProjectId) {
+        handleSelect(newProjectId);
+      }
     } catch (err) {
       toast({
         title: "Creation failed",
@@ -115,25 +121,52 @@ export default function ProjectSection({
   const renderBody = () => {
     if (isLoading) {
       return (
-        <div className="flex justify-center items-center col-span-full py-8">
-          <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-          <p>Loading your projects...</p>
-        </div>
+        <>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900 p-0 overflow-hidden">
+              <Skeleton className="h-40 w-full rounded-none" />
+              <div className="p-3.5">
+                <div className="flex items-center justify-between mb-2">
+                  <Skeleton className="h-4 w-3/5 rounded" />
+                  <Skeleton className="h-3 w-12 rounded" />
+                </div>
+                <Skeleton className="h-3 w-1/3 mb-2.5 rounded" />
+                <Skeleton className="h-3 w-full mb-1 rounded" />
+                <Skeleton className="h-3 w-2/3 rounded" />
+              </div>
+            </div>
+          ))}
+        </>
       );
     }
 
     if (error) {
       return (
-        <div className="col-span-full text-center text-red-500 py-8">
-          <p>Unable to load projects. Please try again.</p>
+        <div className="col-span-full flex flex-col items-center justify-center py-12">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-3">
+            <FolderOpen className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-zinc-400 text-sm">Unable to load projects. Please try again.</p>
         </div>
       );
     }
 
     if (!userProjects || userProjects.length === 0) {
       return (
-        <div className="col-span-full text-center text-gray-400 py-8">
-          <p>No projects found for your account.</p>
+        <div className="col-span-full flex flex-col items-center justify-center py-16">
+          <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+            <FolderOpen className="w-7 h-7 text-zinc-500" />
+          </div>
+          <p className="text-zinc-400 text-sm font-medium mb-1">No projects yet</p>
+          <p className="text-zinc-600 text-sm mb-4">Create your first project to get started</p>
+          <Button
+            size="sm"
+            className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            New Project
+          </Button>
         </div>
       );
     }
@@ -152,17 +185,25 @@ export default function ProjectSection({
   return (
     <section ref={sectionRef} className="dashboard-section">
       <div className="section-header">
-        <h2 className="section-title">SELECT PROJECT</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="section-title">Projects</h2>
+          {userProjects.length > 0 && (
+            <span className="text-xs font-medium text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-md">
+              {userProjects.length}
+            </span>
+          )}
+        </div>
         <Button
-          variant="default"
-          className="section-badge"
+          size="sm"
+          className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5 h-9"
           onClick={() => setCreateDialogOpen(true)}
         >
-          Create Project
+          <Plus className="w-4 h-4" />
+          New Project
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {renderBody()}
       </div>
 
@@ -170,18 +211,18 @@ export default function ProjectSection({
         open={createDialogOpen}
         onOpenChange={(open) => !open && resetCreateFlow()}
       >
-        <DialogContent className="bg-black border-gray-800 max-w-lg">
+        <DialogContent className="bg-zinc-950 border-zinc-800 max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-white text-lg font-semibold">
               Create Project
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Name your project and choose an actor.
+            <DialogDescription className="text-zinc-500 text-sm">
+              Name your project and choose an actor to get started.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="project-name" className="text-gray-300">
+              <Label htmlFor="project-name" className="text-zinc-400 text-sm font-medium">
                 Project name
               </Label>
               <Input
@@ -189,46 +230,58 @@ export default function ProjectSection({
                 placeholder="e.g. My Short Film"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="bg-gray-900 border-gray-800 text-white placeholder-gray-600"
+                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-600 h-10 rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-gray-300">Choose actor</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-auto pr-1">
+              <Label className="text-zinc-400 text-sm font-medium">Choose actor</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-auto pr-1">
                 {actors?.length ? (
                   actors.map((actor) => {
                     const imgUrl = actor.avatarUrl || actor.imageUrl || actor.avatar_url || "";
+                    const isSelected = pendingActorId === actor.id;
                     return (
                       <button
                         key={actor.id}
                         onClick={() => setPendingActorId(actor.id)}
-                        className={`rounded-lg border overflow-hidden flex flex-col items-center text-center p-0 hover:border-purple-500 transition bg-gray-900 ${pendingActorId === actor.id ? "border-purple-500 ring-2 ring-purple-500" : "border-gray-800"}`}
+                        className={`rounded-lg border overflow-hidden flex flex-col items-center text-center p-0 transition-all bg-zinc-900 ${
+                          isSelected
+                            ? "border-violet-500 ring-2 ring-violet-500/30"
+                            : "border-zinc-800 hover:border-zinc-700"
+                        }`}
                         type="button"
                       >
-                        <div className="w-full aspect-square bg-gray-800 relative">
+                        <div className="w-full aspect-square bg-zinc-800 relative flex items-center justify-center">
                           {imgUrl ? (
                             <img
                               src={imgUrl}
                               alt={actor.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover object-center"
                               onError={(e) => {
                                 const el = e.currentTarget;
                                 el.onerror = null;
-                                el.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='55' fill='%239ca3af' text-anchor='middle' font-size='40'%3E%3F%3C/text%3E%3C/svg%3E";
+                                el.style.display = 'none';
                               }}
                             />
                           ) : (
-                            <span className="absolute inset-0 flex items-center justify-center text-2xl text-gray-500">
-                              <User className="w-10 h-10" />
+                            <span className="text-2xl text-zinc-600">
+                              <User className="w-8 h-8" />
                             </span>
+                          )}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-violet-500/20 flex items-center justify-center">
+                              <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
+                                <Check className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            </div>
                           )}
                         </div>
                         <div className="p-2 w-full">
-                          <p className="font-medium text-white text-sm truncate">
+                          <p className="font-medium text-white text-xs truncate">
                             {actor.name}
                           </p>
                           {actor.triggerWord && (
-                            <p className="text-xs text-gray-500 truncate">
+                            <p className="text-[10px] text-zinc-600 truncate mt-0.5">
                               {actor.triggerWord}
                             </p>
                           )}
@@ -237,24 +290,24 @@ export default function ProjectSection({
                     );
                   })
                 ) : (
-                  <div className="col-span-full text-sm text-gray-400 py-4">
+                  <div className="col-span-full text-sm text-zinc-500 py-6 text-center">
                     No actors available.
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+            <div className="flex justify-end gap-2.5 pt-4 border-t border-zinc-800">
               <Button
                 variant="ghost"
                 onClick={resetCreateFlow}
-                className="text-gray-400 hover:text-white hover:bg-gray-800 px-5"
+                className="text-zinc-400 hover:text-white hover:bg-zinc-800 px-4 h-9"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={creating}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+                className="bg-violet-600 hover:bg-violet-700 text-white px-5 h-9"
               >
                 {creating ? "Creating..." : "Create Project"}
               </Button>
@@ -267,59 +320,62 @@ export default function ProjectSection({
 }
 
 function ProjectCard({ project, selected, onSelect, actor }) {
-  const statusVariant = (status) => {
-    if (status === "completed" || status === "done") return "default";
-    if (status === "draft") return "secondary";
-    return "outline";
-  };
-
-  const scriptPreview = project?.scriptText?.trim()
-    ? project.scriptText.length > 80
-      ? `${project.scriptText.slice(0, 80)}...`
-      : project.scriptText
-    : "No script added yet.";
-
   const actorImgSrc = actor?.avatarUrl || actor?.imageUrl || actor?.avatar_url || "";
 
+  const statusColor = {
+    completed: "bg-emerald-500",
+    done: "bg-emerald-500",
+    draft: "bg-zinc-500",
+    active: "bg-violet-500",
+    processing: "bg-amber-500",
+  };
+
   return (
-    <Card className={`actor-card ${selected ? "ring-2 ring-primary" : ""}`}>
-      <CardContent className="actor-card-content">
-        <div className="actor-image">
-          <img
-            src={actorImgSrc}
-            alt={actor?.name || "Actor"}
-            onError={(e) => {
-              const el = e.currentTarget;
-              el.onerror = null;
-              el.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='55' fill='%239ca3af' text-anchor='middle' font-size='40'%3E%3F%3C/text%3E%3C/svg%3E";
-            }}
-          />
+    <Card
+      className={`group cursor-pointer transition-all duration-200 bg-zinc-900 border-zinc-800 rounded-xl hover:border-zinc-700 hover:shadow-lg ${
+        selected ? "ring-2 ring-violet-500 border-violet-500" : ""
+      }`}
+      onClick={onSelect}
+    >
+      <CardContent className="p-0">
+        <div className="h-40 bg-zinc-800 rounded-t-xl overflow-hidden relative flex items-center justify-center">
+          {actorImgSrc ? (
+            <img
+              src={actorImgSrc}
+              alt={actor?.name || "Actor"}
+              className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.onerror = null;
+                el.style.display = 'none';
+              }}
+            />
+          ) : (
+            <span className="text-4xl text-zinc-600 select-none">?</span>
+          )}
+          {selected && (
+            <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
+              <Check className="w-3.5 h-3.5 text-white" />
+            </div>
+          )}
         </div>
 
-        <div className="actor-info">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="actor-name">{actor?.name || "Unknown actor"}</h3>
-            <Badge
-              variant="outline"
-              className="text-[8px] rounded-sm px-2 py-0.5 border-orange-500 text-orange-500"
-            >
-              {project?.status || "unknown"}
-            </Badge>
+        <div className="p-3.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <h3 className="text-sm font-semibold text-white leading-tight truncate pr-2">
+              {project?.projectName || "Untitled Project"}
+            </h3>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className={`w-1.5 h-1.5 rounded-full ${statusColor[project?.status] || "bg-zinc-600"}`} />
+              <span className="text-[10px] text-zinc-500 capitalize">
+                {project?.status || "unknown"}
+              </span>
+            </div>
           </div>
-
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
-            {scriptPreview}
+          <p className="text-xs text-zinc-500">
+            {actor?.name || "No actor assigned"}
           </p>
         </div>
-
-        <Button
-          className="select-actor-btn"
-          variant={selected ? "default" : "outline"}
-          onClick={onSelect}
-          disabled={selected}
-        >
-          {selected ? "Selected" : "Select Project"}
-        </Button>
       </CardContent>
     </Card>
   );

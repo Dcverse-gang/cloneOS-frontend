@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
-import { User, Menu, X } from 'lucide-react';
+import { User, Menu, X, LogOut, CreditCard, HelpCircle } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import { useAuthStore } from '../../../store/auth.store';
 import { logout } from '../../../services/auth.service';
@@ -24,6 +24,11 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
   const handleLoginRedirect = () => {
     navigate('/login');
   };
+
+  const userInitials = user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'U';
+
   return (
     <header className="dashboard-header">
       <div className="header-content">
@@ -33,53 +38,66 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
             alt="DCVerse"
             className="logo"
           />
-          <span className="logo-text">DCVERSE</span>
+          <span className="logo-text">DCVerse</span>
         </div>
+
         <div className="header-actions">
           {user ? (
             <>
-              <div className="user-info flex items-center gap-2 text-white">
-                <User className="w-4 h-4" />
-                <span className="text-sm">{user.email}</span>
-                <span className="text-xs bg-purple-600 px-2 py-1 rounded">
-                  {user.creditsBalance} credits
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+                  <CreditCard className="w-3.5 h-3.5 text-violet-400" />
+                  <span className="text-xs font-medium text-zinc-300">
+                    {user.creditsBalance} credits
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center text-xs font-semibold text-white">
+                    {userInitials}
+                  </div>
+                  <span className="text-sm text-zinc-400 hidden lg:inline">
+                    {user.email}
+                  </span>
+                </div>
               </div>
               <Button
                 variant="ghost"
-                className="header-btn text-white hover:bg-white/10"
+                size="sm"
+                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 px-2.5"
                 onClick={handleLogout}
               >
-                <User className="w-4 h-4 mr-1" />
-                Account
+                <LogOut className="w-4 h-4" />
               </Button>
             </>
           ) : (
             <Button
               variant="ghost"
-              className="header-btn text-white hover:bg-white/10"
+              size="sm"
+              className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 gap-1.5"
               onClick={handleLoginRedirect}
             >
-              <User className="w-4 h-4 mr-1" />
-              Login
+              <User className="w-4 h-4" />
+              <span className="text-sm font-medium">Sign in</span>
             </Button>
           )}
           <Button
             variant="ghost"
-            className="header-btn text-white hover:bg-white/10"
+            size="sm"
+            className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 w-8 p-0 hidden sm:flex"
           >
-            1834 HELP
+            <HelpCircle className="w-4 h-4" />
           </Button>
         </div>
+
         <Button
           variant="ghost"
           className="mobile-menu-btn"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           {sidebarOpen ? (
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           ) : (
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           )}
         </Button>
       </div>
