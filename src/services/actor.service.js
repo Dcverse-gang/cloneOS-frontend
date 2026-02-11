@@ -16,7 +16,7 @@ export function useGetAllActors(options = {}) {
   const { getAllActors } = actorApi();
   return useQuery({
     queryKey: ['actors', 'list'],
-    queryFn: () => getAllActors().then(res => res.data?.data ?? res.data),
+    queryFn: () => getAllActors().then((res) => res.data?.data ?? res.data),
     ...options,
   });
 }

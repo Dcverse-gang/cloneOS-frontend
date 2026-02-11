@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "../store/auth.store";
 
-export const base_url = process.env.BASE_URL || "http://98.84.87.100:3000";
+export const base_url = process.env.BASE_URL || "http://localhost:3001";
 
 const headers = {
   "Content-Type": "application/json",
