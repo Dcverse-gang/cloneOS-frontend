@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [currentSection, setCurrentSection] = useState("select-project");
   const [storyboardFrames, setStoryboardFrames] =
     useState(mockStoryboardFrames);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   const sectionRefs = {
@@ -46,12 +46,25 @@ const Dashboard = () => {
         {/* Sidebar */}
         <DashboardSidebar
           sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
           currentSection={currentSection}
           scrollToSection={scrollToSection}
         />
 
+        {/* Backdrop - click outside to close sidebar */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Main Content */}
-        <main className="dashboard-main">
+        <main
+          className="dashboard-main"
+          onClick={() => sidebarOpen && setSidebarOpen(false)}
+        >
           {/* Section 0: Select Project */}
           <ProjectSection
             sectionRef={sectionRefs["select-project"]}

@@ -1,7 +1,8 @@
 import React from 'react';
-import { FolderOpen, User, FileText, Film, Video } from 'lucide-react';
+import { FolderOpen, User, FileText, Film, Video, X } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
 
-export default function DashboardSidebar({ sidebarOpen, currentSection, scrollToSection }) {
+export default function DashboardSidebar({ sidebarOpen, setSidebarOpen, currentSection, scrollToSection }) {
   const sections = [
     { id: 'select-project', title: '1. Select Project', icon: FolderOpen },
     { id: 'select-avatar', title: '2. Select Avatar', icon: User },
@@ -12,7 +13,20 @@ export default function DashboardSidebar({ sidebarOpen, currentSection, scrollTo
   return (
     <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-content">
-        <h2 className="sidebar-title">CREATION FLOW</h2>
+        <div className="sidebar-header">
+          <h2 className="sidebar-title">CREATION FLOW</h2>
+          {setSidebarOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sidebar-close-btn"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
         <nav className="sidebar-nav">
           {sections.map((section) => {
             const Icon = section.icon;
