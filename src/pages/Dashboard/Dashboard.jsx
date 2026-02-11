@@ -61,10 +61,7 @@ const Dashboard = () => {
         )}
 
         {/* Main Content */}
-        <main
-          className="dashboard-main"
-          onClick={() => sidebarOpen && setSidebarOpen(false)}
-        >
+        <main className="dashboard-main">
           {/* Section 0: Select Project */}
           <ProjectSection
             sectionRef={sectionRefs["select-project"]}
