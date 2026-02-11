@@ -18,6 +18,8 @@ import {
 import { useGetAllActors } from "../../../services/actor.service";
 import { useUser } from "../../../store/auth.store";
 import { useToast } from "../../../hooks/use-toast";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 
 export default function ProjectSection({
   sectionRef,
@@ -28,6 +30,7 @@ export default function ProjectSection({
   const user = useUser();
   const { toast } = useToast();
   const [createStep, setCreateStep] = useState(null);
+  const [projectName, setProjectName] = useState("");
   const [scriptText, setScriptText] = useState("");
   const [pendingActorId, setPendingActorId] = useState(null);
   const { data: projects = [], isLoading, error } = useGetAllProjects();
@@ -61,6 +64,7 @@ export default function ProjectSection({
 
   const resetCreateFlow = () => {
     setCreateStep(null);
+    setProjectName("");
     setScriptText("");
     setPendingActorId(null);
   };
@@ -83,9 +87,18 @@ export default function ProjectSection({
       });
       return;
     }
+    const name = (projectName || "").trim();
+    if (!name) {
+      toast({
+        title: "Project name required",
+        description: "Please enter a name for your project.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await createProject({
-        userId,
+        projectName: name,
         actorId: pendingActorId,
         scriptText: scriptText || null,
       });
@@ -163,10 +176,20 @@ export default function ProjectSection({
           <DialogHeader>
             <DialogTitle className="text-white">Step 1 of 2: Script</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Enter your script text. You will pick an actor next.
+              Name your project and enter your script. You will pick an actor next.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name" className="text-gray-300">Project name</Label>
+              <Input
+                id="project-name"
+                placeholder="e.g. My Short Film"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                className="bg-gray-900 border-gray-800 text-white placeholder-gray-600"
+              />
+            </div>
             <Textarea
               placeholder="Paste or write your script here..."
               value={scriptText}
