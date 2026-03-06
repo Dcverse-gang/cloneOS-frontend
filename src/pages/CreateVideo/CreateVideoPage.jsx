@@ -30,9 +30,8 @@ export default function CreateVideoPage() {
       setActorId(s.actorId ?? null);
       setVideoName(s.projectName ?? '');
       setIsRegenMode(true);
-      setCurrentStep(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCurrentStep(1);
+  }
   }, []);
 
   const handleProjectCreated = (id, actor, name) => {

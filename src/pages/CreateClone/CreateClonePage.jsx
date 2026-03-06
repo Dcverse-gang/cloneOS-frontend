@@ -42,32 +42,63 @@ export default function CreateClonePage() {
   const [filesError, setFilesError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trainingStatus, setTrainingStatus] = useState(null);
+  const [trainingId, setTrainingId] = useState(null);
+   const [trainingS3Url, setTrainingS3Url] = useState(null);
   const [pollingId, setPollingId] = useState(null);
+
+  // Map Replicate status strings → UI labels
+  const toUiStatus = (raw) => ({
+    starting:   "Queued",
+    processing: "Running",
+    succeeded:  "Completed",
+    failed:     "Failed",
+    canceled:   "Failed",
+  }[raw] ?? raw ?? "Unknown");
 
   const configured = isTrainingServiceConfigured();
 
-  const pollStatus = useCallback((taskIdToPoll) => {
+  const pollStatus = useCallback((replicateTrainingId) => {
     const id = setInterval(async () => {
       try {
-        const data = await getTrainingStatus(taskIdToPoll);
-        setTrainingStatus(data?.status ?? "Unknown");
-        if (data?.status === "Completed" || data?.status === "Failed") {
+        const data = await getTrainingStatus(replicateTrainingId);
+        const uiStatus = toUiStatus(data?.status);
+        setTrainingStatus(uiStatus);
+        if (uiStatus === "Completed") {
+          if (data?.s3_url) {
+            setTrainingS3Url(data.s3_url);
+          }
+        }
+        if (uiStatus === "Completed" || uiStatus === "Failed") {
           clearInterval(id);
           setPollingId(null);
+          if (uiStatus === "Failed") {
+            const detail =
+              data?.error ||
+              data?.message ||
+              "Training failed. Please try again or contact support.";
+            toast({
+              title: "Training failed",
+              description: detail,
+              variant: "destructive",
+            });
+          }
         }
       } catch (err) {
         clearInterval(id);
         setPollingId(null);
         toast({
           title: "Status check failed",
-          description: err?.message || "Could not fetch training status.",
+          description:
+            err?.response?.data?.detail ||
+            err?.message ||
+            "Could not fetch training status.",
           variant: "destructive",
         });
       }
     }, POLL_INTERVAL_MS);
     setPollingId(id);
     return () => clearInterval(id);
-  }, [toast]);
+  }, [toast]); // toUiStatus is stable (defined in render scope but pure)
 
   useEffect(() => {
     return () => {
@@ -137,15 +168,22 @@ export default function CreateClonePage() {
     if (!trimmedTaskId || !emotion || !files.length) return;
     setIsSubmitting(true);
     try {
-      await startTraining(trimmedTaskId, emotion, files);
+      const result = await startTraining(trimmedTaskId, emotion, files);
+      const replicateTrainingId = result?.training_id;
+      if (!replicateTrainingId) throw new Error("No training_id returned from server.");
+      setTrainingId(replicateTrainingId);
+        setTrainingS3Url(null);
       setStep(5);
       setTrainingStatus("Queued");
       toast({ title: "Training started", description: "Your clone is being trained." });
-      pollStatus(trimmedTaskId);
+      pollStatus(replicateTrainingId);
     } catch (err) {
       toast({
         title: "Failed to start training",
-        description: err?.response?.data?.detail || err?.message || "Please try again.",
+          description:
+            err?.response?.data?.detail ||
+            err?.message ||
+            "Could not start training. Please check your images and try again.",
         variant: "destructive",
       });
     } finally {
@@ -369,9 +407,12 @@ export default function CreateClonePage() {
                     <div className="flex flex-col items-center gap-3 py-4">
                       <CheckCircle className="w-12 h-12 text-green-500" />
                       <p className="text-zinc-200 font-medium">Training completed</p>
-                      <p className="text-zinc-400 text-sm">Your clone is ready.</p>
+                      <p className="text-zinc-400 text-sm">
+                        Your clone is ready
+                        {trainingS3Url ? " and model weights are stored safely." : "."}
+                      </p>
                       <div className="flex gap-2 mt-2">
-                        <Button onClick={() => { setStep(1); setTaskId(""); setEmotion(""); setFiles([]); setTrainingStatus(null); }} className="hover:bg-violet-600 transition-colors">Train another</Button>
+                        <Button onClick={() => { setStep(1); setTaskId(""); setEmotion(""); setFiles([]); setTrainingStatus(null); setTrainingId(null); }} className="hover:bg-violet-600 transition-colors">Train another</Button>
                         <Button asChild variant="outline"><Link to="/create-video">Create a Video</Link></Button>
                     </div>
                     </div>

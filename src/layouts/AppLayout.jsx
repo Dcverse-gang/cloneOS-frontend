@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Video, Film, UserPlus, Menu, X, LogOut, CreditCard, HelpCircle, BookOpen, Zap, CheckSquare } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { useAuthStore } from '../store/auth.store';
-import { useToast } from '../hooks/use-toast';
-import { logout } from '../services/auth.service';
+import React, { useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import {
+  Video,
+  Film,
+  UserPlus,
+  Menu,
+  X,
+  LogOut,
+  CreditCard,
+  HelpCircle,
+  BookOpen,
+  Zap,
+  CheckSquare,
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { useAuthStore } from "../store/auth.store";
+import { useToast } from "../hooks/use-toast";
+import { logout } from "../services/auth.service";
 
 const navItems = [
-  { to: '/create-video', label: 'Create Video', icon: Video },
-  { to: '/videos', label: 'View Videos', icon: Film },
-  { to: '/create-clone', label: 'Make Clone', icon: UserPlus },
+  { to: "/create-video", label: "Create Video", icon: Video },
+  { to: "/videos", label: "View Videos", icon: Film },
+  { to: "/create-clone", label: "Make Clone", icon: UserPlus },
 ];
 
 export default function AppLayout() {
@@ -21,11 +33,14 @@ export default function AppLayout() {
   const handleLogout = () => {
     clearAuth();
     logout();
-    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    navigate('/login');
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    navigate("/login");
   };
 
-  const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
+  const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "U";
 
   return (
     <div className="app-shell">
@@ -39,7 +54,11 @@ export default function AppLayout() {
               className="app-mobile-menu-btn"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </Button>
             <div className="app-logo">
               <img
@@ -95,7 +114,7 @@ export default function AppLayout() {
         )}
 
         {/* Sidebar */}
-        <aside className={`app-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <aside className={`app-sidebar ${sidebarOpen ? "open" : ""}`}>
           <div className="app-sidebar-inner">
             {/* Close button on mobile */}
             <div className="app-sidebar-mobile-header">
@@ -119,7 +138,7 @@ export default function AppLayout() {
                   to={to}
                   onClick={() => setSidebarOpen(false)}
                   className={({ isActive }) =>
-                    `app-nav-item${isActive ? ' active' : ''}`
+                    `app-nav-item${isActive ? " active" : ""}`
                   }
                 >
                   <Icon className="w-[18px] h-[18px] flex-shrink-0" />
