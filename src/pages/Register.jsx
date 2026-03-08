@@ -66,10 +66,18 @@ const Register = () => {
       });
       navigate("/login");
     } catch (err) {
-      setError(err?.response?.data?.message || "Registration failed");
+      const data = err?.response?.data;
+      const status = err?.response?.status;
+      const message =
+        data?.error ||
+        data?.message ||
+        (status === 400 ? "This email is already registered." : null) ||
+        (status >= 500 ? "Something went wrong. Please try again later." : null) ||
+        "Registration failed";
+      setError(message);
       toast({
-        title: "Registration Failed",
-        description: err?.response?.data?.message || "Registration failed",
+        title: "Registration failed",
+        description: message,
         variant: "destructive",
       });
     }
