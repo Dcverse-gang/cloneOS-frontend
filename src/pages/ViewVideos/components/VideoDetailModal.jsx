@@ -34,6 +34,16 @@ const SCENE_STATUS_COLORS = {
   PENDING: 'bg-amber-600/80 text-white',
 };
 
+function derivePhaseLabel(project) {
+  const scenes = project?.scenes || [];
+  if (!scenes.length) return 'Setup';
+  const allHaveFinal = scenes.every((s) => s.finalImageUrl);
+  if (allHaveFinal) return 'Images ready';
+  const anySketches = scenes.some((s) => s.sketchUrl);
+  if (anySketches) return 'Sketches';
+  return 'Scripting';
+}
+
 export default function VideoDetailModal({ projectId, project, actor, open, onClose }) {
   const navigate = useNavigate();
 
@@ -43,16 +53,12 @@ export default function VideoDetailModal({ projectId, project, actor, open, onCl
   const statusColor = STATUS_COLORS[project.status] || 'bg-zinc-600/80 text-zinc-200';
   const isActive = ['processing', 'storyboarding', 'casting'].includes(project.status);
   const createdDate = project.createdAt ? format(new Date(project.createdAt), 'MMMM d, yyyy') : null;
+  const phaseLabel = derivePhaseLabel(project);
 
   const handleRegenerate = () => {
     onClose();
-    navigate('/create-video', {
-      state: {
-        isRegenerate: true,
-        projectId,
-        projectName: project.projectName,
-        actorId: project.actorId,
-      },
+    navigate(`/create-video/${projectId}?regen=script`, {
+      state: { isRegenerate: true, projectId, projectName: project.projectName, actorId: project.actorId },
     });
   };
 
@@ -135,6 +141,10 @@ export default function VideoDetailModal({ projectId, project, actor, open, onCl
               <div className="vv-modal-detail-item">
                 <span className="vv-modal-detail-label">Scenes</span>
                 <span className="vv-modal-detail-value">{scenes.length}</span>
+              </div>
+              <div className="vv-modal-detail-item">
+                <span className="vv-modal-detail-label">Phase</span>
+                <span className="vv-modal-detail-value">{phaseLabel}</span>
               </div>
             </div>
           </section>

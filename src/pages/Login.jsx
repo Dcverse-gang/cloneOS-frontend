@@ -50,10 +50,18 @@ const Login = () => {
       });
       navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.message || "Login failed");
+      const data = err?.response?.data;
+      const status = err?.response?.status;
+      const message =
+        data?.error ||
+        data?.message ||
+        (status === 401 ? "Invalid email or password" : null) ||
+        (status >= 500 ? "Something went wrong. Please try again later." : null) ||
+        "Login failed";
+      setError(message);
       toast({
-        title: "Login Failed",
-        description: err.message || "An unexpected error occurred",
+        title: "Login failed",
+        description: message,
         variant: "destructive",
       });
     } finally {

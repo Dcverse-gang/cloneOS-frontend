@@ -16,8 +16,10 @@ import { useToast } from "../../hooks/use-toast";
 import {
   startTraining,
   getTrainingStatus,
+  getMyClone,
   isTrainingServiceConfigured,
 } from "../../services/training.service";
+import { useAuthStore } from "../../store/auth.store";
 import { Loader2, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 
 const EMOTIONS = [
@@ -43,8 +45,10 @@ export default function CreateClonePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trainingStatus, setTrainingStatus] = useState(null);
   const [trainingId, setTrainingId] = useState(null);
-   const [trainingS3Url, setTrainingS3Url] = useState(null);
+  const [trainingS3Url, setTrainingS3Url] = useState(null);
   const [pollingId, setPollingId] = useState(null);
+  const [existingClone, setExistingClone] = useState(null);
+  const [loadingClone, setLoadingClone] = useState(true);
 
   // Map Replicate status strings → UI labels
   const toUiStatus = (raw) => ({
@@ -56,6 +60,7 @@ export default function CreateClonePage() {
   }[raw] ?? raw ?? "Unknown");
 
   const configured = isTrainingServiceConfigured();
+  const token = useAuthStore((state) => state.token);
 
   const pollStatus = useCallback((replicateTrainingId) => {
     const id = setInterval(async () => {
@@ -67,6 +72,7 @@ export default function CreateClonePage() {
           if (data?.s3_url) {
             setTrainingS3Url(data.s3_url);
           }
+          getMyClone().then((c) => c && setExistingClone(c));
         }
         if (uiStatus === "Completed" || uiStatus === "Failed") {
           clearInterval(id);
@@ -105,6 +111,61 @@ export default function CreateClonePage() {
       if (pollingId) clearInterval(pollingId);
     };
   }, [pollingId]);
+
+  // Fetch current user's clone on load; sync status from Replicate once, then show step 5 and poll if still in progress
+  const isTrainingInProgress = (c) =>
+    c?.current_training_id && (c?.training_status === "starting" || c?.training_status === "processing");
+
+  useEffect(() => {
+    if (!configured) {
+      setLoadingClone(false);
+      return;
+    }
+    if (!token) return;
+    getMyClone()
+      .then(async (data) => {
+        setExistingClone(data ?? null);
+        if (data?.model_name) setTaskId(data.model_name);
+        if (!data?.current_training_id) return;
+        // Sync status from Replicate on first load (backend updates DB if there's a mismatch)
+        try {
+          const statusData = await getTrainingStatus(data.current_training_id);
+          const uiStatus = toUiStatus(statusData?.status);
+          setTrainingId(data.current_training_id);
+          setTrainingStatus(uiStatus);
+          setStep(5);
+          if (uiStatus === "Completed") {
+            if (statusData?.s3_url) setTrainingS3Url(statusData.s3_url);
+            const updated = await getMyClone();
+            if (updated) setExistingClone(updated);
+          } else if (uiStatus === "Failed") {
+            const detail =
+              statusData?.error ||
+              statusData?.message ||
+              "Training failed. Please try again or contact support.";
+            toast({
+              title: "Training failed",
+              description: detail,
+              variant: "destructive",
+            });
+          } else {
+            pollStatus(data.current_training_id);
+          }
+        } catch (err) {
+          // If status check fails, still show DB state and start polling
+          setTrainingId(data.current_training_id);
+          setTrainingStatus(toUiStatus(data.training_status));
+          setStep(5);
+          if (isTrainingInProgress(data)) pollStatus(data.current_training_id);
+        }
+      })
+      .catch((err) => {
+        if (err?.response?.status !== 401) {
+          setExistingClone(null);
+        }
+      })
+      .finally(() => setLoadingClone(false));
+  }, [configured, token]);
 
   const validateTaskId = () => {
     const trimmed = (taskId || "").trim();
@@ -178,12 +239,24 @@ export default function CreateClonePage() {
       toast({ title: "Training started", description: "Your clone is being trained." });
       pollStatus(replicateTrainingId);
     } catch (err) {
+      const detail = err?.response?.data?.detail ?? err?.message ?? "Could not start training. Please check your images and try again.";
+      const isAlreadyHaveClone = err?.response?.status === 400 && typeof detail === "string" && detail.includes("already have a clone");
+      const trainingAlreadyInProgress = err?.response?.status === 409;
+      if (isAlreadyHaveClone || trainingAlreadyInProgress) {
+        getMyClone().then((data) => {
+          setExistingClone(data ?? null);
+          if (data?.model_name) setTaskId(data.model_name);
+          if (data && trainingAlreadyInProgress && data.current_training_id) {
+            setStep(5);
+            setTrainingId(data.current_training_id);
+            setTrainingStatus(toUiStatus(data.training_status ?? "starting"));
+            pollStatus(data.current_training_id);
+          }
+        });
+      }
       toast({
         title: "Failed to start training",
-          description:
-            err?.response?.data?.detail ||
-            err?.message ||
-            "Could not start training. Please check your images and try again.",
+        description: detail,
         variant: "destructive",
       });
     } finally {
@@ -235,6 +308,21 @@ export default function CreateClonePage() {
     );
   }
 
+  if (loadingClone) {
+    return (
+      <div className="clone-page">
+        <div className="clone-page-header">
+          <h1 className="clone-page-title">Make Clone</h1>
+          <p className="clone-page-subtitle">Train a custom AI model on your images in a few simple steps.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
+          <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
+          <p className="text-zinc-400">Loading your clone…</p>
+        </div>
+      </div>
+    );
+  }
+
   const stepLabels = [
     "Name your clone",
     "Select emotion",
@@ -267,27 +355,37 @@ export default function CreateClonePage() {
             {step === 1 && (
               <Card className="border-zinc-800 bg-zinc-900/50">
                 <CardHeader>
-                  <CardTitle className="text-zinc-200">Name your clone</CardTitle>
+                  <CardTitle className="text-zinc-200">
+                    {existingClone ? "Your clone" : "Name your clone"}
+                  </CardTitle>
                   <p className="text-zinc-400 text-sm">
-                    Choose a unique ID (e.g. my-clone-1). Use letters, numbers, hyphens, and underscores only.
+                    {existingClone
+                      ? "You can retrain this clone with new images below."
+                      : "Choose a unique ID (e.g. my-clone-1). Use letters, numbers, hyphens, and underscores only."}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="task_id" className="text-zinc-300">Task / clone ID</Label>
-                    <Input
-                      id="task_id"
-                      value={taskId}
-                      onChange={(e) => {
-                        setTaskId(e.target.value);
-                        setTaskIdError("");
-                      }}
-                      placeholder="my-clone-1"
-                      className="mt-1.5 bg-zinc-800 border-zinc-700 text-zinc-100 hover:border-zinc-600 focus:ring-violet-500/30 transition-colors"
-                    />
+                    {existingClone ? (
+                      <div className="mt-1.5 rounded-md bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-200 font-medium">
+                        {taskId || existingClone.model_name}
+                      </div>
+                    ) : (
+                      <Input
+                        id="task_id"
+                        value={taskId}
+                        onChange={(e) => {
+                          setTaskId(e.target.value);
+                          setTaskIdError("");
+                        }}
+                        placeholder="my-clone-1"
+                        className="mt-1.5 bg-zinc-800 border-zinc-700 text-zinc-100 hover:border-zinc-600 focus:ring-violet-500/30 transition-colors"
+                      />
+                    )}
                     {taskIdError && <p className="text-red-400 text-sm mt-1">{taskIdError}</p>}
                   </div>
-                  <Button onClick={handleNextFromStep1} className="hover:bg-violet-600 transition-colors">Next</Button>
+                  <Button onClick={existingClone ? () => setStep(2) : handleNextFromStep1} className="hover:bg-violet-600 transition-colors">Next</Button>
                 </CardContent>
               </Card>
             )}
@@ -412,9 +510,22 @@ export default function CreateClonePage() {
                         {trainingS3Url ? " and model weights are stored safely." : "."}
                       </p>
                       <div className="flex gap-2 mt-2">
-                        <Button onClick={() => { setStep(1); setTaskId(""); setEmotion(""); setFiles([]); setTrainingStatus(null); setTrainingId(null); }} className="hover:bg-violet-600 transition-colors">Train another</Button>
+                        <Button
+                          onClick={() => {
+                            setStep(1);
+                            setEmotion("");
+                            setFiles([]);
+                            setTrainingStatus(null);
+                            setTrainingId(null);
+                            setTaskId(existingClone?.model_name ?? taskId.trim());
+                            getMyClone().then((data) => setExistingClone(data ?? null));
+                          }}
+                          className="hover:bg-violet-600 transition-colors"
+                        >
+                          Retrain again
+                        </Button>
                         <Button asChild variant="outline"><Link to="/create-video">Create a Video</Link></Button>
-                    </div>
+                      </div>
                     </div>
                   ) : trainingStatus === "Failed" ? (
                     <div className="flex flex-col items-center gap-3 py-4">
@@ -441,6 +552,27 @@ export default function CreateClonePage() {
         {/* Right: Pleasing UI */}
         <div className="create-clone-right-col">
           <div className="create-clone-right-inner">
+            {existingClone && (
+              <Card className="border-zinc-800 bg-zinc-900/50 mb-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-zinc-200 text-base">Your model</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5 text-sm">
+                  <p className="text-zinc-300"><span className="text-zinc-500">Name:</span> <strong>{existingClone.model_name}</strong></p>
+                  {existingClone.s3_url ? (
+                    <p className="text-zinc-400">
+                      <span className="text-zinc-500">Weights:</span>{" "}
+                      <a href={existingClone.s3_url} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline truncate block">Stored (view)</a>
+                    </p>
+                  ) : (
+                    <p className="text-zinc-500">Weights: pending or retraining</p>
+                  )}
+                  {existingClone.created_at && (
+                    <p className="text-zinc-500 text-xs">Created {new Date(existingClone.created_at).toLocaleDateString()}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
             <div className="create-clone-step-list">
               <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-3">Steps</p>
               {stepLabels.map((label, i) => (

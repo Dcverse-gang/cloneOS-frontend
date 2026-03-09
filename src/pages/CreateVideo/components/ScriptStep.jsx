@@ -43,7 +43,13 @@ function phaseIndex(phase) {
   return PHASE_STEPS.findIndex((s) => s.key === phase);
 }
 
-export default function ScriptStep({ projectId, onBack, onProceedToVideo }) {
+const REGEN_TO_PHASE = {
+  script: PHASE.PROMPT,
+  sketches: PHASE.SKETCHES,
+  images: PHASE.IMAGES,
+};
+
+export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenParam }) {
   const { toast } = useToast();
   const [prompt, setPrompt] = useState('');
   const [phase, setPhase] = useState(PHASE.PROMPT);
@@ -109,18 +115,22 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo }) {
           isLocked: false,
         }));
       setFrames(loadedFrames);
-      const hasFinalImages = loadedFrames.some((f) => f.finalImageUrl);
+      const allHaveFinalImages = loadedFrames.every((f) => f.finalImageUrl);
       const hasSketches = loadedFrames.some((f) => f.sketchUrl);
-      if (hasFinalImages) setPhase(PHASE.IMAGES);
+      if (allHaveFinalImages) setPhase(PHASE.IMAGES);
       else if (hasSketches) setPhase(PHASE.SKETCHES);
       else setPhase(PHASE.SCENES);
       if (selectedProject.scriptText) {
         setPrompt(selectedProject.scriptText);
       } else {
-        const combined = loadedFrames.map((f) => f.scriptText).filter(Boolean).join(' | ');
-        setPrompt(combined || 'Prompt not saved for this project');
+        // Fallback: if no scriptText saved, show a placeholder
+        setPrompt('(Original prompt not saved for this project)');
       }
       setPromptCollapsed(true);
+      if (regenParam && REGEN_TO_PHASE[regenParam]) {
+        setPhase(REGEN_TO_PHASE[regenParam]);
+        if (regenParam === 'script') setPromptCollapsed(false);
+      }
     } else {
       clearFrames();
       setPhase(PHASE.PROMPT);
@@ -226,6 +236,14 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo }) {
               );
             })}
           </div>
+
+          {regenParam && (
+            <div className="mb-4 rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm text-violet-200">
+              {regenParam === 'script' && 'Edit the prompt below and regenerate the script, or continue from here.'}
+              {regenParam === 'sketches' && 'You can regenerate sketches for all scenes below.'}
+              {regenParam === 'images' && 'You can regenerate final images for scenes below.'}
+            </div>
+          )}
 
           {/* Prompt Area */}
           <Card className="script-card">

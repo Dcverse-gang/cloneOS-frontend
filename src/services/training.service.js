@@ -57,6 +57,21 @@ export const startTraining = async (taskId, emotion, imageFiles) => {
 };
 
 /**
+ * Get the current user's single clone, or null if they have none.
+ * @returns {Promise<{ model_name: string, s3_url: string|null, created_at: string|null }|null>}
+ */
+export const getMyClone = async () => {
+  try {
+    const { data } = await trainingClient.get("/me/clone");
+    return data;
+  } catch (err) {
+    if (err?.response?.status === 404) return null;
+    // 401: re-throw so caller does not treat "unauthorized" as "no clone"
+    throw err;
+  }
+};
+
+/**
  * Poll training status using the Replicate training_id returned by startTraining.
  * Backend status values: starting | processing | succeeded | failed | canceled
  * @param {string} trainingId - The training_id from the startTraining response.

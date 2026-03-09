@@ -11,9 +11,20 @@ const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'vv-status-draft', icon: FileText },
 };
 
+function derivePhaseLabel(project) {
+  const scenes = project?.scenes || [];
+  if (!scenes.length) return null;
+  const allHaveFinal = scenes.every((s) => s.finalImageUrl);
+  if (allHaveFinal) return 'Images';
+  const anySketches = scenes.some((s) => s.sketchUrl);
+  if (anySketches) return 'Sketches';
+  return 'Scripting';
+}
+
 export default function VideoCard({ project, actor, onClick }) {
   const status = STATUS_CONFIG[project?.status] || { label: project?.status || 'Unknown', color: 'vv-status-draft', icon: AlertCircle };
   const StatusIcon = status.icon;
+  const phaseLabel = derivePhaseLabel(project);
 
   const thumbnailSrc =
     project?.scenes?.find((s) => s.finalImageUrl)?.finalImageUrl ||
@@ -78,6 +89,9 @@ export default function VideoCard({ project, actor, onClick }) {
               <FileText className="w-3 h-3" />
               {sceneCount} {sceneCount === 1 ? 'scene' : 'scenes'}
             </span>
+          )}
+          {phaseLabel && (
+            <span className="vv-card-meta-item text-zinc-500">{phaseLabel}</span>
           )}
           {createdDate && (
             <span className="vv-card-meta-item">
