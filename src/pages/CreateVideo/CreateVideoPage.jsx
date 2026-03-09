@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Video, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import VideoNameStep from './components/VideoNameStep';
 import ScriptStep from './components/ScriptStep';
 import GenerationStep from './components/GenerationStep';
 import { useStoryboardStore } from '../../store/storyboard.store';
+import { useGetProjectById } from '../../services/project.service';
 
 const STEPS = [
   { id: 'setup', label: 'Setup', icon: Video },
@@ -12,9 +13,17 @@ const STEPS = [
   { id: 'generate', label: 'Generate Video', icon: Sparkles },
 ];
 
+function deriveStepFromProject(project) {
+  // Always show Script step (step 1) when there's a project with scenes
+  // The Script step will internally show the correct phase (scenes/sketches/images)
+  // User manually proceeds to Generate Video (step 2) by clicking "Proceed to Video"
+  if (!project?.scenes?.length) return 1;
+  return 1; // Always script step, never auto-advance to step 2
+}
+
 export default function CreateVideoPage() {
+  const { projectId: urlProjectId } = useParams();
   const [currentStep, setCurrentStep] = useState(0);
-  const [projectId, setProjectId] = useState(null);
   const [actorId, setActorId] = useState(null);
   const [videoName, setVideoName] = useState('');
   const [isRegenMode, setIsRegenMode] = useState(false);
@@ -23,22 +32,31 @@ export default function CreateVideoPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const effectiveProjectId = urlProjectId || null;
+  const { data: project, isLoading: isLoadingProject, isError: isProjectError } = useGetProjectById(effectiveProjectId);
+
   useEffect(() => {
     const s = location.state;
-    if (s?.isRegenerate && s?.projectId) {
-      setProjectId(s.projectId);
-      setActorId(s.actorId ?? null);
-      setVideoName(s.projectName ?? '');
-      setIsRegenMode(true);
-    setCurrentStep(1);
-  }
-  }, []);
+    if (s?.isRegenerate && s?.projectId) setIsRegenMode(true);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!effectiveProjectId) {
+      setCurrentStep(0);
+      return;
+    }
+    if (isProjectError) {
+      navigate('/create-video', { replace: true });
+      return;
+    }
+    if (!project) return;
+    setVideoName(project.projectName ?? '');
+    setActorId(project.actorId ?? null);
+    setCurrentStep(deriveStepFromProject(project));
+  }, [effectiveProjectId, project, isProjectError, navigate]);
 
   const handleProjectCreated = (id, actor, name) => {
-    setProjectId(id);
-    setActorId(actor);
-    setVideoName(name);
-    setCurrentStep(1);
+    navigate(`/create-video/${id}`, { state: location.state });
   };
 
   const handleStartNew = () => {
@@ -46,18 +64,15 @@ export default function CreateVideoPage() {
       navigate('/videos');
       return;
     }
-    setProjectId(null);
-    setActorId(null);
-    setVideoName('');
     clearFrames();
-    setCurrentStep(0);
+    navigate('/create-video', { replace: true });
   };
 
   const handleScriptBack = () => {
     if (isRegenMode) {
       navigate('/videos');
     } else {
-      setCurrentStep(0);
+      navigate('/create-video');
     }
   };
 
@@ -94,19 +109,25 @@ export default function CreateVideoPage() {
 
       {/* Step content */}
       <div className="cv-page-content">
-        {currentStep === 0 && (
+        {effectiveProjectId && isLoadingProject && currentStep === 0 && (
+          <div className="cv-step-container flex items-center justify-center min-h-[200px]">
+            <p className="text-zinc-500">Loading project...</p>
+          </div>
+        )}
+        {currentStep === 0 && !(effectiveProjectId && isLoadingProject) && (
           <VideoNameStep onCreated={handleProjectCreated} />
         )}
         {currentStep === 1 && (
           <ScriptStep
-            projectId={projectId}
+            projectId={effectiveProjectId}
             onBack={handleScriptBack}
             onProceedToVideo={() => setCurrentStep(2)}
+            regenParam={new URLSearchParams(location.search).get('regen')}
           />
         )}
         {currentStep === 2 && (
           <GenerationStep
-            projectId={projectId}
+            projectId={effectiveProjectId}
             onBack={() => setCurrentStep(1)}
             onStartNew={handleStartNew}
             startNewLabel={isRegenMode ? 'Back to Videos' : undefined}

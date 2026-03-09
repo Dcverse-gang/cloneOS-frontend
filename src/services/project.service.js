@@ -73,7 +73,7 @@ export function useGetProjectById(projectId, options = {}) {
     queryKey: ['projects', projectId],
     enabled: !!projectId,
     queryFn: () => getProjectById(projectId).then(res => res.data?.data ?? res.data),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always fetch fresh data on mount/refresh
     ...options,
   });
 }

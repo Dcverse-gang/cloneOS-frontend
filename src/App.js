@@ -30,6 +30,7 @@ function App() {
           >
             <Route index element={<Navigate to="/create-video" replace />} />
             <Route path="create-video" element={<CreateVideoPage />} />
+            <Route path="create-video/:projectId" element={<CreateVideoPage />} />
             <Route path="videos" element={<ViewVideosPage />} />
             <Route path="create-clone" element={<CreateClonePage />} />
           </Route>

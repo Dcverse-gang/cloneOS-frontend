@@ -112,7 +112,7 @@ export default function CreateClonePage() {
     };
   }, [pollingId]);
 
-  // Fetch current user's clone on load; if a training is already in progress, show step 5 and poll
+  // Fetch current user's clone on load; sync status from Replicate once, then show step 5 and poll if still in progress
   const isTrainingInProgress = (c) =>
     c?.current_training_id && (c?.training_status === "starting" || c?.training_status === "processing");
 
@@ -123,14 +123,40 @@ export default function CreateClonePage() {
     }
     if (!token) return;
     getMyClone()
-      .then((data) => {
+      .then(async (data) => {
         setExistingClone(data ?? null);
         if (data?.model_name) setTaskId(data.model_name);
-        if (data && isTrainingInProgress(data)) {
+        if (!data?.current_training_id) return;
+        // Sync status from Replicate on first load (backend updates DB if there's a mismatch)
+        try {
+          const statusData = await getTrainingStatus(data.current_training_id);
+          const uiStatus = toUiStatus(statusData?.status);
+          setTrainingId(data.current_training_id);
+          setTrainingStatus(uiStatus);
+          setStep(5);
+          if (uiStatus === "Completed") {
+            if (statusData?.s3_url) setTrainingS3Url(statusData.s3_url);
+            const updated = await getMyClone();
+            if (updated) setExistingClone(updated);
+          } else if (uiStatus === "Failed") {
+            const detail =
+              statusData?.error ||
+              statusData?.message ||
+              "Training failed. Please try again or contact support.";
+            toast({
+              title: "Training failed",
+              description: detail,
+              variant: "destructive",
+            });
+          } else {
+            pollStatus(data.current_training_id);
+          }
+        } catch (err) {
+          // If status check fails, still show DB state and start polling
           setTrainingId(data.current_training_id);
           setTrainingStatus(toUiStatus(data.training_status));
           setStep(5);
-          pollStatus(data.current_training_id);
+          if (isTrainingInProgress(data)) pollStatus(data.current_training_id);
         }
       })
       .catch((err) => {
