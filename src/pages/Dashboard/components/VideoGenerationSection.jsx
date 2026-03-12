@@ -46,8 +46,20 @@ export default function VideoGenerationSection({ sectionRef, selectedProjectId, 
           return;
         }
       }
-    } catch {
-      // API failed — fall back to sample video
+    } catch (err) {
+      const status = err?.response?.status;
+      const message = err?.response?.data?.error || err?.message;
+      if (status === 402) {
+        setIsGenerating(false);
+        toast({
+          title: 'Insufficient credits',
+          description: message || 'You need more credits to generate this video. Buy credits to continue.',
+          variant: 'destructive',
+        });
+        window.dispatchEvent(new CustomEvent('openBuyCredits'));
+        return;
+      }
+      // Other API errors — fall back to sample video
     }
 
     // Fallback: show sample video after a short simulated delay
