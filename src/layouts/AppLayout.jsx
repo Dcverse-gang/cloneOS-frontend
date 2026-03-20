@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   Video,
@@ -17,6 +17,7 @@ import { Button } from "../components/ui/button";
 import { useAuthStore } from "../store/auth.store";
 import { useToast } from "../hooks/use-toast";
 import { logout } from "../services/auth.service";
+import BuyCreditsModal from "../components/BuyCreditsModal";
 
 const navItems = [
   { to: "/create-video", label: "Create Video", icon: Video },
@@ -26,9 +27,17 @@ const navItems = [
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, clearAuth } = useAuthStore();
+
+  // Allow child pages to open Buy Credits modal (e.g. on 402 insufficient credits)
+  useEffect(() => {
+    const openBuyCredits = () => setBuyCreditsOpen(true);
+    window.addEventListener("openBuyCredits", openBuyCredits);
+    return () => window.removeEventListener("openBuyCredits", openBuyCredits);
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -73,10 +82,20 @@ export default function AppLayout() {
           <div className="app-header-actions">
             {user && (
               <>
-                <div className="app-credits-badge">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="app-credits-badge"
+                  onClick={() => setBuyCreditsOpen(true)}
+                  title="Buy credits"
+                >
                   <CreditCard className="w-3.5 h-3.5 text-violet-400" />
                   <span>{user.creditsBalance ?? 0} credits</span>
-                </div>
+                </Button>
+                <BuyCreditsModal
+                  open={buyCreditsOpen}
+                  onClose={() => setBuyCreditsOpen(false)}
+                />
                 <div className="app-user-badge">
                   <div className="app-user-avatar">{userInitials}</div>
                   <span className="app-user-email">{user.email}</span>

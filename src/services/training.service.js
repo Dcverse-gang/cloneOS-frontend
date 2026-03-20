@@ -1,6 +1,7 @@
 import axios from "axios";
 import JSZip from "jszip";
 import { useAuthStore } from "../store/auth.store";
+import { authAxios } from "./url.service";
 
 const trainingBaseURL =
   process.env.REACT_APP_TRAINING_API_URL || "http://localhost:8002";
@@ -24,6 +25,15 @@ trainingClient.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 );
+
+/**
+ * Reserve/deduct credits for starting a clone (CloneOS backend). Call this before startTraining.
+ * Throws with response.status === 402 if insufficient credits.
+ */
+export const reserveCreditsForClone = async () => {
+  const { data } = await authAxios.post("/clone/start");
+  return data;
+};
 
 /**
  * Start LoRA training via POST /train.

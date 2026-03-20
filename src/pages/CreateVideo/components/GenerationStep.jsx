@@ -33,8 +33,20 @@ export default function GenerationStep({ projectId, onBack, onStartNew, startNew
           return;
         }
       }
-    } catch {
-      // Fall back to sample
+    } catch (err) {
+      const status = err?.response?.status;
+      const message = err?.response?.data?.error || err?.message;
+      if (status === 402) {
+        setIsGenerating(false);
+        toast({
+          title: 'Insufficient credits',
+          description: message || 'You need more credits to generate this video. Buy credits to continue.',
+          variant: 'destructive',
+        });
+        window.dispatchEvent(new CustomEvent('openBuyCredits'));
+        return;
+      }
+      // Other errors: fall back to sample
     }
     setTimeout(() => {
       const sampleUrl = 'https://customer-assets.emergentagent.com/job_virtual-actor/artifacts/r3dkm2v5_TeraMeraPyar-Ai%20Salman.mp4';

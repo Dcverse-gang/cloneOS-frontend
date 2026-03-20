@@ -14,6 +14,7 @@ import {
 import { Progress } from "../../components/ui/progress";
 import { useToast } from "../../hooks/use-toast";
 import {
+  reserveCreditsForClone,
   startTraining,
   getTrainingStatus,
   getMyClone,
@@ -228,6 +229,32 @@ export default function CreateClonePage() {
     const trimmedTaskId = taskId.trim();
     if (!trimmedTaskId || !emotion || !files.length) return;
     setIsSubmitting(true);
+    try {
+      // Deduct credits via CloneOS backend first; 402 = insufficient credits
+      const creditData = await reserveCreditsForClone();
+      if (creditData?.creditsBalance != null) {
+        useAuthStore.getState().updateCredits(creditData.creditsBalance);
+      }
+    } catch (err) {
+      if (err?.response?.status === 402) {
+        setIsSubmitting(false);
+        const message = err?.response?.data?.error || "You need more credits to start clone training. Buy credits to continue.";
+        toast({
+          title: "Insufficient credits",
+          description: message,
+          variant: "destructive",
+        });
+        window.dispatchEvent(new CustomEvent("openBuyCredits"));
+        return;
+      }
+      setIsSubmitting(false);
+      toast({
+        title: "Could not start clone",
+        description: err?.response?.data?.error || err?.message || "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const result = await startTraining(trimmedTaskId, emotion, files);
       const replicateTrainingId = result?.training_id;
