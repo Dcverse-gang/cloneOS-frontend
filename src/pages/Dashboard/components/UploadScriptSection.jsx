@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
+import SceneScriptCard from '../../../components/storyboard/SceneScriptCard';
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
@@ -7,17 +8,11 @@ import { Dialog, DialogContent } from '../../../components/ui/dialog';
 import { Skeleton } from '../../../components/ui/skeleton';
 import {
   RefreshCw,
-  Film,
-  Lock,
-  Unlock,
   Loader,
   CheckCircle2,
   AlertCircle,
   Pencil,
   ChevronRight,
-  ImageIcon,
-  Eye,
-  RotateCw,
   ArrowRight,
 } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
@@ -270,11 +265,11 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                  <Skeleton className="h-[180px] w-full rounded-lg mb-3" />
-                  <Skeleton className="h-4 w-24 mb-2 rounded" />
-                  <Skeleton className="h-3 w-full mb-1 rounded" />
-                  <Skeleton className="h-3 w-3/4 mb-3 rounded" />
+                <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 border-l-[3px] border-l-violet-500/60">
+                  <Skeleton className="h-4 w-28 mb-3 rounded" />
+                  <Skeleton className="h-3 w-full mb-2 rounded" />
+                  <Skeleton className="h-3 w-full mb-2 rounded" />
+                  <Skeleton className="h-3 w-4/5 mb-4 rounded" />
                   <div className="flex gap-2">
                     <Skeleton className="h-7 w-16 rounded" />
                     <Skeleton className="h-7 w-14 rounded" />
@@ -383,45 +378,16 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
 
           <div className="storyboard-grid">
             {frames.map((frame) => (
-              <Card key={frame.id} className="storyboard-card group">
-                <CardContent className="storyboard-content">
-                  <div className="frame-preview">
-                    {frame.finalImageUrl ? (
-                      <img src={frame.finalImageUrl} alt={frame.scene} />
-                    ) : frame.sketchUrl ? (
-                      <img src={frame.sketchUrl} alt={frame.scene} />
-                    ) : (
-                      <div className="frame-placeholder">
-                        <Film className="w-6 h-6" />
-                        <p className="text-xs">Pending</p>
-                      </div>
-                    )}
-                    {frame.finalImageUrl && frame.sketchUrl && (
-                      <div className="frame-final-badge">
-                        <ImageIcon className="w-3 h-3" />
-                        Final
-                      </div>
-                    )}
-                  </div>
-                  <div className="frame-info">
-                    <h4>Scene {frame.sequenceOrder}</h4>
-                    <p className="line-clamp-2">{frame.scriptText}</p>
-                  </div>
-                  <div className="frame-actions">
-                    <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => setSelectedFrame(frame)}>
-                      <Eye className="w-3.5 h-3.5 mr-1" />
-                      View
-                    </Button>
-                    <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => setRegenerateFrame(frame)}>
-                      <RotateCw className="w-3.5 h-3.5 mr-1" />
-                      Redo
-                    </Button>
-                    <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => toggleLock(frame.id)}>
-                      {frame.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <SceneScriptCard
+                key={frame.id}
+                frame={frame}
+                onView={setSelectedFrame}
+                onRegenerate={setRegenerateFrame}
+                onToggleLock={toggleLock}
+                workflowPhase={phase}
+                generatingSketches={generatingSketches}
+                generatingImages={generatingImages}
+              />
             ))}
           </div>
 
@@ -464,8 +430,7 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
 
           {/* Scrollable Content */}
           <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-            {/* Primary Image */}
-            {(selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl) ? (
+            {selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl ? (
               <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
                 <img
                   src={selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl}
@@ -473,32 +438,30 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
                   className="w-full object-contain max-h-[400px]"
                 />
               </div>
-            ) : (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center py-12">
-                <Film className="w-10 h-10 text-zinc-700 mb-2" />
-                <p className="text-zinc-500 text-sm">No image available</p>
-              </div>
-            )}
+            ) : null}
 
-            {/* Script Text */}
             <div className="space-y-2">
               <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Script Text</h4>
-              <p className="text-sm text-zinc-300 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed">
+              <p className="text-sm text-zinc-300 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
                 {selectedFrame?.scriptText}
               </p>
             </div>
 
-            {/* AI Prompt */}
             {selectedFrame?.aiPrompt && (
               <div className="space-y-2">
                 <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">AI Prompt</h4>
-                <p className="text-sm text-zinc-400 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed">
+                <p className="text-sm text-zinc-400 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
                   {selectedFrame?.aiPrompt}
                 </p>
               </div>
             )}
 
-            {/* Sketch (shown separately when final image also exists) */}
+            {!(selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl) && (
+              <p className="text-xs text-zinc-500 border border-zinc-800/80 bg-zinc-900/60 rounded-lg px-3 py-2">
+                No storyboard image yet. Continue the flow to generate sketches, then final frames.
+              </p>
+            )}
+
             {selectedFrame?.sketchUrl && selectedFrame?.finalImageUrl && (
               <div className="space-y-2">
                 <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Sketch</h4>
