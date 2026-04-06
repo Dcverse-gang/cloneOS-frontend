@@ -5,7 +5,18 @@ import { Input } from "../components/ui/input";
 import { useToast } from "../hooks/use-toast";
 import { useAuthStore } from "../store/auth.store";
 import { useLogin } from "../services/auth.service";
-import { Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles, Film, Palette } from "lucide-react";
+import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { StaggerItemIndexed } from "../motion/Stagger";
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Film,
+  Palette,
+} from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -56,7 +67,9 @@ const Login = () => {
         data?.error ||
         data?.message ||
         (status === 401 ? "Invalid email or password" : null) ||
-        (status >= 500 ? "Something went wrong. Please try again later." : null) ||
+        (status >= 500
+          ? "Something went wrong. Please try again later."
+          : null) ||
         "Login failed";
       setError(message);
       toast({
@@ -74,127 +87,153 @@ const Login = () => {
       {/* Left Branding Panel */}
       <div className="auth-branding hidden md:flex">
         <div className="auth-branding-content">
-          <h1>Create stunning AI-powered videos</h1>
-          <p>
-            Transform your ideas into professional video content with our
-            AI-driven creative platform.
-          </p>
-          <div className="auth-feature">
-            <div className="auth-feature-icon">
-              <Sparkles className="w-4 h-4" />
+          <StaggerItemIndexed index={0}>
+            <h1>Create stunning AI-powered videos</h1>
+          </StaggerItemIndexed>
+          <StaggerItemIndexed index={1}>
+            <p>
+              Transform your ideas into professional video content with our
+              AI-driven creative platform.
+            </p>
+          </StaggerItemIndexed>
+          <StaggerItemIndexed index={2}>
+            <div className="auth-feature">
+              <div className="auth-feature-icon">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <span>AI-powered script and storyboard generation</span>
             </div>
-            <span>AI-powered script and storyboard generation</span>
-          </div>
-          <div className="auth-feature">
-            <div className="auth-feature-icon">
-              <Film className="w-4 h-4" />
+          </StaggerItemIndexed>
+          <StaggerItemIndexed index={3}>
+            <div className="auth-feature">
+              <div className="auth-feature-icon">
+                <Film className="w-4 h-4" />
+              </div>
+              <span>Professional video creation in minutes</span>
             </div>
-            <span>Professional video creation in minutes</span>
-          </div>
-          <div className="auth-feature">
-            <div className="auth-feature-icon">
-              <Palette className="w-4 h-4" />
+          </StaggerItemIndexed>
+          <StaggerItemIndexed index={4}>
+            <div className="auth-feature">
+              <div className="auth-feature-icon">
+                <Palette className="w-4 h-4" />
+              </div>
+              <span>Customizable actors and visual styles</span>
             </div>
-            <span>Customizable actors and visual styles</span>
-          </div>
+          </StaggerItemIndexed>
         </div>
       </div>
 
       {/* Right Form Panel */}
       <div className="auth-form-side">
         <div className="auth-form-container">
-          <div className="auth-logo">
-            <img src="/logo.png" alt="DCVerse" />
-            <span>DCVerse</span>
-          </div>
+          <StaggerItemIndexed index={0}>
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <div className="auth-logo !mb-0 min-w-0">
+                <img src="/logo.png" alt="DCVerse" />
+                <span>DCVerse</span>
+              </div>
+              <ThemeToggleButton />
+            </div>
+          </StaggerItemIndexed>
 
-          <h2>Welcome back</h2>
-          <p className="auth-subtitle">
-            Sign in to your account to continue
-          </p>
+          <StaggerItemIndexed index={1}>
+            <h2>Welcome back</h2>
+          </StaggerItemIndexed>
+          <StaggerItemIndexed index={2}>
+            <p className="auth-subtitle">Sign in to your account to continue</p>
+          </StaggerItemIndexed>
 
           <form onSubmit={handleSubmit}>
-            <div className="auth-input-group">
-              <label htmlFor="email">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4 pointer-events-none z-10" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="h-11 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-lg"
-                  style={{ paddingLeft: '2.75rem' }}
-                  required
-                />
+            <StaggerItemIndexed index={3}>
+              <div className="auth-input-group">
+                <label htmlFor="email">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none z-10" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="h-11 bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg"
+                    style={{ paddingLeft: "2.75rem" }}
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            </StaggerItemIndexed>
 
-            <div className="auth-input-group">
-              <label htmlFor="password">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4 pointer-events-none z-10" />
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="h-11 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-lg"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors z-10"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
+            <StaggerItemIndexed index={4}>
+              <div className="auth-input-group">
+                <label htmlFor="password">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none z-10" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="h-11 bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg"
+                    style={{ paddingLeft: "2.75rem", paddingRight: "2.75rem" }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            </StaggerItemIndexed>
 
             {error && (
               <div className="text-red-400 text-sm mb-4 px-1">{error}</div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-colors rounded-lg"
-              disabled={isLoading || isPending}
-            >
-              {isLoading || isPending ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  Sign in
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              )}
-            </Button>
+            <StaggerItemIndexed index={5}>
+              <Button
+                type="submit"
+                className="w-full h-11 btn-gradient-primary font-semibold transition-colors rounded-lg"
+                disabled={isLoading || isPending}
+              >
+                {isLoading || isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    Sign in
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                )}
+              </Button>
+            </StaggerItemIndexed>
           </form>
 
-          <div className="auth-footer-link">
-            Don't have an account?{" "}
-            <Link to="/register">Create one</Link>
-          </div>
+          <StaggerItemIndexed index={6}>
+            <div className="auth-footer-link">
+              Don't have an account? <Link to="/register">Create one</Link>
+            </div>
+          </StaggerItemIndexed>
 
-          <div className="auth-info-card">
-            <p>
-              Welcome back to DCVerse. Continue your creative journey with
-              AI-powered tools and manage your projects.
-            </p>
-          </div>
+          <StaggerItemIndexed index={7}>
+            <div className="auth-info-card">
+              <p>
+                Welcome back to DCVerse. Continue your creative journey with
+                AI-powered tools and manage your projects.
+              </p>
+            </div>
+          </StaggerItemIndexed>
         </div>
       </div>
     </div>

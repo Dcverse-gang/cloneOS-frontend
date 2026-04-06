@@ -3,18 +3,20 @@ import { Card, CardContent } from '../../../components/ui/card';
 import SceneScriptCard from '../../../components/storyboard/SceneScriptCard';
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
-import { Badge } from '../../../components/ui/badge';
 import { Dialog, DialogContent } from '../../../components/ui/dialog';
 import { Skeleton } from '../../../components/ui/skeleton';
+import StoryboardImageLightbox from '../../../components/storyboard/StoryboardImageLightbox';
 import {
   RefreshCw,
   Loader,
   CheckCircle2,
-  AlertCircle,
   Pencil,
   ChevronRight,
   ArrowRight,
   ArrowLeft,
+  Upload,
+  Archive,
+  RotateCw,
 } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import {
@@ -23,7 +25,13 @@ import {
   useGenerateSketches,
   useGenerateImages,
   useRegenerateScene,
+  useGetProjectFeedback,
+  useUploadStoryboard,
 } from '../../../services/project.service';
+import {
+  downloadImageFromUrl,
+  downloadSketchesZip,
+} from '../../../utils/storyboardAssets';
 import { useStoryboardStore, useStoryboardFrames } from '../../../store/storyboard.store';
 
 const PHASE = { PROMPT: 'prompt', SCENES: 'scenes', SKETCHES: 'sketches', IMAGES: 'images' };
@@ -38,6 +46,9 @@ function phaseIndex(phase) {
   return PHASE_STEPS.findIndex((s) => s.key === phase);
 }
 
+const MAX_SKETCH_FILE_BYTES = 10 * 1024 * 1024;
+const SKETCH_ACCEPT = 'image/png,image/jpeg,image/webp';
+
 const REGEN_TO_PHASE = {
   script: PHASE.PROMPT,
   sketches: PHASE.SKETCHES,
@@ -50,22 +61,40 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
   const [phase, setPhase] = useState(PHASE.PROMPT);
   const [promptCollapsed, setPromptCollapsed] = useState(false);
   const lastLoadedProjectId = useRef(null);
+  const storyboardFileInputRef = useRef(null);
 
   const frames = useStoryboardFrames();
   const { setFrames, updateFrame, clearFrames } = useStoryboardStore();
 
   const { data: selectedProject, isLoading: isLoadingProject } = useGetProjectById(projectId);
 
+  const { data: feedbackList = [] } = useGetProjectFeedback(projectId);
+
   const { mutateAsync: generateScript, isPending: generatingScript } = useGenerateScript();
   const { mutateAsync: generateSketches, isPending: generatingSketches } = useGenerateSketches();
   const { mutateAsync: generateImages, isPending: generatingImages } = useGenerateImages();
   const regenerateMutation = useRegenerateScene();
+  const { mutateAsync: uploadStoryboard, isPending: uploadingStoryboard } = useUploadStoryboard();
 
-  const [selectedFrame, setSelectedFrame] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
   const [regenerateFrame, setRegenerateFrame] = useState(null);
   const [regeneratePrompt, setRegeneratePrompt] = useState('');
 
-  const isBusy = generatingScript || generatingSketches || generatingImages;
+  useEffect(() => {
+    if (!regenerateFrame) return;
+    setRegeneratePrompt(String(regenerateFrame.aiPrompt || regenerateFrame.scriptText || '').trim());
+  }, [regenerateFrame?.id]);
+
+  const isBusy =
+    generatingScript || generatingSketches || generatingImages || uploadingStoryboard;
+
+  const showCustomStoryboardUpload =
+    phase === PHASE.SKETCHES &&
+    frames.length > 0 &&
+    frames.every((f) => f.sketchUrl);
+
+  const canDownloadAllSketches =
+    frames.length > 0 && frames.every((f) => f.sketchUrl);
 
   const parseScenes = (res) => {
     const scenes = res?.data ?? res?.scenes ?? res ?? [];
@@ -179,6 +208,99 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
 
   const toggleLock = (id) => updateFrame(id, (f) => ({ ...f, isLocked: !f.isLocked }));
 
+  const openLightbox = (frame, opts) => {
+    setLightbox({
+      frame,
+      initialTab: opts?.tab ?? (frame.finalImageUrl ? 'final' : 'sketch'),
+    });
+  };
+
+  const handleDownloadSketchForFrame = (frame) => {
+    if (!frame?.sketchUrl) return;
+    downloadImageFromUrl(frame.sketchUrl, `scene-${frame.sequenceOrder}-sketch.png`);
+  };
+
+  const handleDownloadAllSketches = async () => {
+    try {
+      await downloadSketchesZip(frames);
+      toast({
+        title: 'Download started',
+        description: 'Your sketches zip is downloading.',
+      });
+    } catch (e) {
+      toast({
+        title: 'Download failed',
+        description: e?.message || 'Could not build the zip.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCustomStoryboardFiles = async (event) => {
+    const fileList = event.target.files;
+    if (!fileList?.length || !projectId) {
+      event.target.value = '';
+      return;
+    }
+    const files = Array.from(fileList);
+    if (files.length !== frames.length) {
+      toast({
+        title: 'Wrong number of files',
+        description: `Upload exactly ${frames.length} images (one per scene in order). You selected ${files.length}.`,
+        variant: 'destructive',
+      });
+      event.target.value = '';
+      return;
+    }
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (file.size > MAX_SKETCH_FILE_BYTES) {
+        toast({
+          title: 'File too large',
+          description: `Each image must be at most 10 MB. "${file.name}" is too large.`,
+          variant: 'destructive',
+        });
+        event.target.value = '';
+        return;
+      }
+      const okType =
+        file.type === 'image/png' ||
+        file.type === 'image/jpeg' ||
+        file.type === 'image/webp';
+      if (!okType) {
+        toast({
+          title: 'Invalid file type',
+          description: `Only PNG, JPEG, or WEBP are allowed. Got "${file.name}".`,
+          variant: 'destructive',
+        });
+        event.target.value = '';
+        return;
+      }
+    }
+    try {
+      const res = await uploadStoryboard({ projectId, files });
+      const newFrames = parseScenes(res);
+      setFrames(newFrames);
+      toast({
+        title: 'Custom sketches uploaded',
+        description: 'Your storyboard images replaced the generated sketches.',
+      });
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Upload failed.';
+      toast({
+        title: 'Upload failed',
+        description: msg,
+        variant: 'destructive',
+      });
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const primaryAction = useMemo(() => {
     if (phase === PHASE.PROMPT) return { label: 'Generate Script', handler: handleGenerateScript, loading: generatingScript };
     if (phase === PHASE.SCENES) return { label: 'Generate Sketches', handler: handleGenerateSketches, loading: generatingSketches };
@@ -207,7 +329,7 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 max-w-[800px] mx-auto">
+          <div className="rounded-xl border border-border bg-card p-6 max-w-[800px] mx-auto">
             <Skeleton className="h-3 w-48 mb-4 rounded" />
             <Skeleton className="h-28 w-full mb-4 rounded-lg" />
             <div className="flex justify-center"><Skeleton className="h-10 w-44 rounded-lg" /></div>
@@ -233,7 +355,7 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
           </div>
 
           {regenParam && (
-            <div className="mb-4 rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm text-violet-200">
+            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm text-primary">
               {regenParam === 'script' && 'Edit the prompt below and regenerate the script, or continue from here.'}
               {regenParam === 'sketches' && 'You can regenerate sketches for all scenes below.'}
               {regenParam === 'images' && 'You can regenerate final images for scenes below.'}
@@ -267,7 +389,7 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
                     />
                     {prompt.length > 0 && (
                       <div className="text-right mt-1">
-                        <span className="text-xs text-zinc-600">{prompt.length} characters</span>
+                        <span className="text-xs text-muted-foreground">{prompt.length} characters</span>
                       </div>
                     )}
                   </div>
@@ -290,10 +412,45 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
           {/* Scene Grid */}
           {frames.length > 0 && currentPhaseIdx >= phaseIndex(PHASE.SCENES) && (
             <div className="storyboard-area">
-              <div className="storyboard-area-header">
-                <div className="flex items-center gap-2.5">
+              <div className="storyboard-area-header flex flex-wrap items-center gap-2 justify-between">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <h3 className="subsection-title">Scenes</h3>
-                  <span className="text-xs font-medium text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-md">{frames.length}</span>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{frames.length}</span>
+                  {showCustomStoryboardUpload && (
+                    <>
+                      <input
+                        ref={storyboardFileInputRef}
+                        type="file"
+                        accept={SKETCH_ACCEPT}
+                        multiple
+                        className="hidden"
+                        onChange={handleCustomStoryboardFiles}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={() => storyboardFileInputRef.current?.click()}
+                        title="First file = scene 1, second = scene 2, etc."
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        Replace with my sketches
+                      </Button>
+                    </>
+                  )}
+                  {canDownloadAllSketches && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadAllSketches}
+                      title="Download all sketches as a zip"
+                    >
+                      <Archive className="w-3.5 h-3.5 mr-1.5" />
+                      Download all sketches
+                    </Button>
+                  )}
                 </div>
                 {phase !== PHASE.PROMPT && (
                   <Button variant="ghost" size="sm" className="restart-btn" onClick={() => { setPhase(PHASE.PROMPT); setPromptCollapsed(false); }}>
@@ -301,13 +458,19 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
                   </Button>
                 )}
               </div>
+              {showCustomStoryboardUpload && (
+                <p className="text-xs text-muted-foreground mb-3 max-w-2xl">
+                  Upload exactly {frames.length} images (PNG, JPEG, or WEBP, max 10 MB each), in scene order — first file for scene 1, second for scene 2, and so on. This replaces the AI-generated sketches.
+                </p>
+              )}
 
               <div className="storyboard-grid">
                 {frames.map((frame) => (
                   <SceneScriptCard
                     key={frame.id}
                     frame={frame}
-                    onView={setSelectedFrame}
+                    onView={openLightbox}
+                    onDownloadSketch={handleDownloadSketchForFrame}
                     onRegenerate={setRegenerateFrame}
                     onToggleLock={toggleLock}
                     workflowPhase={phase}
@@ -338,91 +501,39 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
         </>
       )}
 
-      {/* Frame Details Modal */}
-      <Dialog open={!!selectedFrame} onOpenChange={() => setSelectedFrame(null)}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 p-0 rounded-xl overflow-hidden max-h-[85vh] flex flex-col">
-          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-zinc-800 flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <h3 className="text-base font-semibold text-white">Scene {selectedFrame?.sequenceOrder}</h3>
-              <Badge
-                className={`px-2 py-0.5 rounded-md font-medium flex items-center gap-1.5 text-[11px] ${
-                  selectedFrame?.status === 'completed' || selectedFrame?.status === 'LORA_PROCESSED'
-                    ? 'bg-emerald-600/80 text-white'
-                    : selectedFrame?.status === 'processing' || selectedFrame?.status === 'SKETCHED'
-                    ? 'bg-blue-600/80 text-white'
-                    : selectedFrame?.status === 'pending' || selectedFrame?.status === 'PENDING'
-                    ? 'bg-amber-600/80 text-white'
-                    : 'bg-zinc-700/80 text-zinc-300'
-                }`}
-              >
-                {(selectedFrame?.status === 'completed' || selectedFrame?.status === 'LORA_PROCESSED') && <CheckCircle2 className="w-3 h-3" />}
-                {(selectedFrame?.status === 'processing' || selectedFrame?.status === 'SKETCHED') && <Loader className="w-3 h-3 animate-spin" />}
-                {(selectedFrame?.status === 'pending' || selectedFrame?.status === 'PENDING') && <AlertCircle className="w-3 h-3" />}
-                <span className="capitalize">{selectedFrame?.status}</span>
-              </Badge>
-            </div>
-          </div>
-          <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-            {selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl ? (
-              <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
-                <img
-                  src={selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl}
-                  alt={`Scene ${selectedFrame?.sequenceOrder}`}
-                  className="w-full object-contain max-h-[400px]"
-                />
-              </div>
-            ) : null}
-            <div className="space-y-2">
-              <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Script Text</h4>
-              <p className="text-sm text-zinc-300 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
-                {selectedFrame?.scriptText}
-              </p>
-            </div>
-            {selectedFrame?.aiPrompt && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">AI Prompt</h4>
-                <p className="text-sm text-zinc-400 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
-                  {selectedFrame?.aiPrompt}
-                </p>
-              </div>
-            )}
-            {!(selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl) && (
-              <p className="text-xs text-zinc-500 border border-zinc-800/80 bg-zinc-900/60 rounded-lg px-3 py-2">
-                No storyboard image yet. Continue the flow to generate sketches, then final frames.
-              </p>
-            )}
-            {selectedFrame?.sketchUrl && selectedFrame?.finalImageUrl && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Sketch</h4>
-                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
-                  <img src={selectedFrame.sketchUrl} alt="Sketch" className="w-full object-contain max-h-[300px]" />
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <StoryboardImageLightbox
+        open={Boolean(lightbox)}
+        onOpenChange={(open) => !open && setLightbox(null)}
+        frame={lightbox?.frame ?? null}
+        projectId={projectId}
+        initialTab={lightbox?.initialTab ?? 'final'}
+        feedbackList={feedbackList}
+        onRegenerate={(frame) => {
+          setLightbox(null);
+          setRegenerateFrame(frame);
+        }}
+      />
 
       {/* Regenerate Scene Modal */}
       <Dialog open={!!regenerateFrame} onOpenChange={() => { setRegenerateFrame(null); setRegeneratePrompt(''); }}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md rounded-xl">
+        <DialogContent className="bg-background border-border max-w-md rounded-xl">
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold text-white mb-1">Regenerate Scene</h3>
-              <p className="text-sm text-zinc-500">Enter a new prompt for Scene {regenerateFrame?.sequenceOrder}</p>
+              <h3 className="text-base font-semibold text-foreground mb-1">Regenerate Scene</h3>
+              <p className="text-sm text-muted-foreground">Enter a new prompt for Scene {regenerateFrame?.sequenceOrder}</p>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prompt</label>
               <Textarea
                 value={regeneratePrompt}
                 onChange={(e) => setRegeneratePrompt(e.target.value)}
                 placeholder="Describe what you'd like for this scene..."
-                className="bg-zinc-900 border-zinc-800 text-white resize-none rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                className="bg-background border-border text-foreground resize-none rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
                 rows={4}
               />
             </div>
             <div className="flex gap-2.5 justify-end pt-3">
-              <Button variant="ghost" onClick={() => { setRegenerateFrame(null); setRegeneratePrompt(''); }} className="text-zinc-400 hover:text-white hover:bg-zinc-800 h-9">Cancel</Button>
+              <Button variant="ghost" onClick={() => { setRegenerateFrame(null); setRegeneratePrompt(''); }} className="text-muted-foreground hover:text-foreground hover:bg-accent h-9">Cancel</Button>
               <Button
                 onClick={() => {
                   if (regeneratePrompt.trim() && regenerateFrame?.id) {
@@ -433,9 +544,9 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
                   }
                 }}
                 disabled={!regeneratePrompt.trim() || regenerateMutation.isPending}
-                className="bg-violet-600 hover:bg-violet-700 text-white h-9"
+                className="btn-gradient-primary h-9"
               >
-                {regenerateMutation.isPending ? <><Loader className="w-4 h-4 mr-2 animate-spin" />Regenerating...</> : 'Regenerate'}
+                {regenerateMutation.isPending ? <><Loader className="w-4 h-4 mr-2 animate-spin" />Regenerating...</> : <><RotateCw className="w-4 h-4 mr-2" />Redo</>}
               </Button>
             </div>
           </div>

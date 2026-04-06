@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Card, CardContent } from '../../../components/ui/card';
-import SceneScriptCard from '../../../components/storyboard/SceneScriptCard';
-import { Button } from '../../../components/ui/button';
-import { Textarea } from '../../../components/ui/textarea';
-import { Badge } from '../../../components/ui/badge';
-import { Dialog, DialogContent } from '../../../components/ui/dialog';
-import { Skeleton } from '../../../components/ui/skeleton';
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { Card, CardContent } from "../../../components/ui/card";
+import SceneScriptCard from "../../../components/storyboard/SceneScriptCard";
+import { Button } from "../../../components/ui/button";
+import { Textarea } from "../../../components/ui/textarea";
+import { Dialog, DialogContent } from "../../../components/ui/dialog";
+import { Skeleton } from "../../../components/ui/skeleton";
+import StoryboardImageLightbox from "../../../components/storyboard/StoryboardImageLightbox";
 import {
   RefreshCw,
   Loader,
@@ -14,73 +14,122 @@ import {
   Pencil,
   ChevronRight,
   ArrowRight,
-} from 'lucide-react';
-import { useToast } from '../../../hooks/use-toast';
+  Upload,
+  Archive,
+  RotateCw,
+} from "lucide-react";
+import { useToast } from "../../../hooks/use-toast";
 import {
   useGetProjectById,
   useGenerateScript,
   useGenerateSketches,
   useGenerateImages,
   useRegenerateScene,
-} from '../../../services/project.service';
-import { useStoryboardStore, useStoryboardFrames } from '../../../store/storyboard.store';
+  useGetProjectFeedback,
+  useUploadStoryboard,
+} from "../../../services/project.service";
+import {
+  downloadImageFromUrl,
+  downloadSketchesZip,
+} from "../../../utils/storyboardAssets";
+import {
+  useStoryboardStore,
+  useStoryboardFrames,
+} from "../../../store/storyboard.store";
 
 // Phase constants
 const PHASE = {
-  PROMPT: 'prompt',
-  SCENES: 'scenes',
-  SKETCHES: 'sketches',
-  IMAGES: 'images',
+  PROMPT: "prompt",
+  SCENES: "scenes",
+  SKETCHES: "sketches",
+  IMAGES: "images",
 };
 
 const PHASE_STEPS = [
-  { key: PHASE.PROMPT, label: 'Prompt', number: 1 },
-  { key: PHASE.SCENES, label: 'Scenes', number: 2 },
-  { key: PHASE.SKETCHES, label: 'Sketches', number: 3 },
-  { key: PHASE.IMAGES, label: 'Images', number: 4 },
+  { key: PHASE.PROMPT, label: "Prompt", number: 1 },
+  { key: PHASE.SCENES, label: "Scenes", number: 2 },
+  { key: PHASE.SKETCHES, label: "Sketches", number: 3 },
+  { key: PHASE.IMAGES, label: "Images", number: 4 },
 ];
 
 function phaseIndex(phase) {
   return PHASE_STEPS.findIndex((s) => s.key === phase);
 }
 
-export default function UploadScriptSection({ sectionRef, selectedProjectId, onProceedToVideo }) {
+const MAX_SKETCH_FILE_BYTES = 10 * 1024 * 1024;
+const SKETCH_ACCEPT = "image/png,image/jpeg,image/webp";
+
+export default function UploadScriptSection({
+  sectionRef,
+  selectedProjectId,
+  onProceedToVideo,
+}) {
   const { toast } = useToast();
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState("");
   const [phase, setPhase] = useState(PHASE.PROMPT);
   const [promptCollapsed, setPromptCollapsed] = useState(false);
   const lastLoadedProjectId = useRef(null);
+  const storyboardFileInputRef = useRef(null);
 
   // Zustand store
   const frames = useStoryboardFrames();
   const { setFrames, updateFrame, clearFrames } = useStoryboardStore();
 
   // Fetch selected project details (includes scenes)
-  const { data: selectedProject, isLoading: isLoadingProject } = useGetProjectById(selectedProjectId);
+  const { data: selectedProject, isLoading: isLoadingProject } =
+    useGetProjectById(selectedProjectId);
+
+  const { data: feedbackList = [] } = useGetProjectFeedback(selectedProjectId);
 
   // Mutations
-  const { mutateAsync: generateScript, isPending: generatingScript } = useGenerateScript();
-  const { mutateAsync: generateSketches, isPending: generatingSketches } = useGenerateSketches();
-  const { mutateAsync: generateImages, isPending: generatingImages } = useGenerateImages();
+  const { mutateAsync: generateScript, isPending: generatingScript } =
+    useGenerateScript();
+  const { mutateAsync: generateSketches, isPending: generatingSketches } =
+    useGenerateSketches();
+  const { mutateAsync: generateImages, isPending: generatingImages } =
+    useGenerateImages();
   const regenerateMutation = useRegenerateScene();
+  const { mutateAsync: uploadStoryboard, isPending: uploadingStoryboard } =
+    useUploadStoryboard();
 
   // Modal state
-  const [selectedFrame, setSelectedFrame] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
   const [regenerateFrame, setRegenerateFrame] = useState(null);
-  const [regeneratePrompt, setRegeneratePrompt] = useState('');
+  const [regeneratePrompt, setRegeneratePrompt] = useState("");
 
-  const isBusy = generatingScript || generatingSketches || generatingImages;
+  useEffect(() => {
+    if (!regenerateFrame) return;
+    setRegeneratePrompt(
+      String(
+        regenerateFrame.aiPrompt || regenerateFrame.scriptText || "",
+      ).trim(),
+    );
+  }, [regenerateFrame?.id]);
+
+  const isBusy =
+    generatingScript ||
+    generatingSketches ||
+    generatingImages ||
+    uploadingStoryboard;
+
+  const showCustomStoryboardUpload =
+    phase === PHASE.SKETCHES &&
+    frames.length > 0 &&
+    frames.every((f) => f.sketchUrl);
+
+  const canDownloadAllSketches =
+    frames.length > 0 && frames.every((f) => f.sketchUrl);
 
   const parseScenes = (res) => {
     const scenes = res?.data ?? res?.scenes ?? res ?? [];
     return (scenes || []).map((scene, idx) => ({
       id: scene.id || `scene-${idx}`,
       scene: scene.scene || `Scene ${scene.sequenceOrder ?? idx + 1}`,
-      scriptText: scene.scriptText || scene.aiPrompt || 'No description',
+      scriptText: scene.scriptText || scene.aiPrompt || "No description",
       aiPrompt: scene.aiPrompt || null,
       sketchUrl: scene.sketchUrl || null,
       finalImageUrl: scene.finalImageUrl || null,
-      status: scene.status || 'pending',
+      status: scene.status || "pending",
       sequenceOrder: scene.sequenceOrder ?? idx + 1,
       isLocked: false,
     }));
@@ -92,7 +141,7 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
     if (!selectedProjectId) {
       // No project selected — reset everything
       clearFrames();
-      setPrompt('');
+      setPrompt("");
       setPhase(PHASE.PROMPT);
       setPromptCollapsed(false);
       lastLoadedProjectId.current = null;
@@ -100,7 +149,8 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
     }
 
     // Avoid re-loading the same project repeatedly
-    if (!selectedProject || lastLoadedProjectId.current === selectedProjectId) return;
+    if (!selectedProject || lastLoadedProjectId.current === selectedProjectId)
+      return;
     lastLoadedProjectId.current = selectedProjectId;
 
     const scenes = selectedProject.scenes || [];
@@ -112,11 +162,11 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
         .map((scene, idx) => ({
           id: scene.id || `scene-${idx}`,
           scene: scene.scene || `Scene ${scene.sequenceOrder ?? idx + 1}`,
-          scriptText: scene.scriptText || scene.aiPrompt || 'No description',
+          scriptText: scene.scriptText || scene.aiPrompt || "No description",
           aiPrompt: scene.aiPrompt || null,
           sketchUrl: scene.sketchUrl || null,
           finalImageUrl: scene.finalImageUrl || null,
-          status: scene.status || 'pending',
+          status: scene.status || "pending",
           sequenceOrder: scene.sequenceOrder ?? idx + 1,
           isLocked: false,
         }));
@@ -140,8 +190,11 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
         setPrompt(selectedProject.scriptText);
       } else {
         // Fallback: build a summary from the scene scriptTexts if no top-level prompt was saved
-        const combined = loadedFrames.map(f => f.scriptText).filter(Boolean).join(' | ');
-        setPrompt(combined || 'Prompt not saved for this project');
+        const combined = loadedFrames
+          .map((f) => f.scriptText)
+          .filter(Boolean)
+          .join(" | ");
+        setPrompt(combined || "Prompt not saved for this project");
       }
       setPromptCollapsed(true);
     } else {
@@ -153,30 +206,48 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
       if (selectedProject.scriptText) {
         setPrompt(selectedProject.scriptText);
       } else {
-        setPrompt('');
+        setPrompt("");
       }
     }
   }, [selectedProjectId, selectedProject]);
 
   const handleGenerateScript = async () => {
     if (!selectedProjectId) {
-      toast({ title: 'Select a project', description: 'Please choose a project before generating.', variant: 'destructive' });
+      toast({
+        title: "Select a project",
+        description: "Please choose a project before generating.",
+        variant: "destructive",
+      });
       return;
     }
     const userPrompt = prompt.trim();
     if (!userPrompt) {
-      toast({ title: 'Enter a prompt', description: 'Please describe your script idea.', variant: 'destructive' });
+      toast({
+        title: "Enter a prompt",
+        description: "Please describe your script idea.",
+        variant: "destructive",
+      });
       return;
     }
     try {
-      const res = await generateScript({ projectId: selectedProjectId, prompt: userPrompt });
+      const res = await generateScript({
+        projectId: selectedProjectId,
+        prompt: userPrompt,
+      });
       const newFrames = parseScenes(res);
       setFrames(newFrames);
       setPromptCollapsed(true);
       setPhase(PHASE.SCENES);
-      toast({ title: 'Script generated', description: `${newFrames.length} scenes created.` });
+      toast({
+        title: "Script generated",
+        description: `${newFrames.length} scenes created.`,
+      });
     } catch (error) {
-      toast({ title: 'Generation failed', description: error?.message || 'Could not generate script.', variant: 'destructive' });
+      toast({
+        title: "Generation failed",
+        description: error?.message || "Could not generate script.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -187,9 +258,16 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
       const newFrames = parseScenes(res);
       setFrames(newFrames);
       setPhase(PHASE.SKETCHES);
-      toast({ title: 'Sketches generated', description: 'Storyboard sketches are ready.' });
+      toast({
+        title: "Sketches generated",
+        description: "Storyboard sketches are ready.",
+      });
     } catch (error) {
-      toast({ title: 'Sketch generation failed', description: error?.message || 'Could not generate sketches.', variant: 'destructive' });
+      toast({
+        title: "Sketch generation failed",
+        description: error?.message || "Could not generate sketches.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -200,9 +278,16 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
       const newFrames = parseScenes(res);
       setFrames(newFrames);
       setPhase(PHASE.IMAGES);
-      toast({ title: 'Final images generated', description: 'Photorealistic images are ready.' });
+      toast({
+        title: "Final images generated",
+        description: "Photorealistic images are ready.",
+      });
     } catch (error) {
-      toast({ title: 'Image generation failed', description: error?.message || 'Could not generate final images.', variant: 'destructive' });
+      toast({
+        title: "Image generation failed",
+        description: error?.message || "Could not generate final images.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -219,17 +304,142 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
     updateFrame(id, (f) => ({ ...f, isLocked: !f.isLocked }));
   };
 
+  const openLightbox = (frame, opts) => {
+    setLightbox({
+      frame,
+      initialTab:
+        opts?.tab ?? (frame.finalImageUrl ? "final" : "sketch"),
+    });
+  };
+
+  const handleDownloadSketchForFrame = (frame) => {
+    if (!frame?.sketchUrl) return;
+    downloadImageFromUrl(
+      frame.sketchUrl,
+      `scene-${frame.sequenceOrder}-sketch.png`
+    );
+  };
+
+  const handleDownloadAllSketches = async () => {
+    try {
+      await downloadSketchesZip(frames);
+      toast({
+        title: "Download started",
+        description: "Your sketches zip is downloading.",
+      });
+    } catch (e) {
+      toast({
+        title: "Download failed",
+        description: e?.message || "Could not build the zip.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCustomStoryboardFiles = async (event) => {
+    const fileList = event.target.files;
+    if (!fileList?.length || !selectedProjectId) {
+      event.target.value = "";
+      return;
+    }
+    const files = Array.from(fileList);
+    if (files.length !== frames.length) {
+      toast({
+        title: "Wrong number of files",
+        description: `Upload exactly ${frames.length} images (one per scene in order). You selected ${files.length}.`,
+        variant: "destructive",
+      });
+      event.target.value = "";
+      return;
+    }
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (file.size > MAX_SKETCH_FILE_BYTES) {
+        toast({
+          title: "File too large",
+          description: `Each image must be at most 10 MB. "${file.name}" is too large.`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+      const okType =
+        file.type === "image/png" ||
+        file.type === "image/jpeg" ||
+        file.type === "image/webp";
+      if (!okType) {
+        toast({
+          title: "Invalid file type",
+          description: `Only PNG, JPEG, or WEBP are allowed. Got "${file.name}".`,
+          variant: "destructive",
+        });
+        event.target.value = "";
+        return;
+      }
+    }
+    try {
+      const res = await uploadStoryboard({
+        projectId: selectedProjectId,
+        files,
+      });
+      const newFrames = parseScenes(res);
+      setFrames(newFrames);
+      toast({
+        title: "Custom sketches uploaded",
+        description: "Your storyboard images replaced the generated sketches.",
+      });
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Upload failed.";
+      toast({
+        title: "Upload failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const primaryAction = useMemo(() => {
-    if (phase === PHASE.PROMPT) return { label: 'Generate Script', handler: handleGenerateScript, loading: generatingScript };
-    if (phase === PHASE.SCENES) return { label: 'Generate Sketches', handler: handleGenerateSketches, loading: generatingSketches };
-    if (phase === PHASE.SKETCHES) return { label: 'Generate Final Images', handler: handleGenerateImages, loading: generatingImages };
+    if (phase === PHASE.PROMPT)
+      return {
+        label: "Generate Script",
+        handler: handleGenerateScript,
+        loading: generatingScript,
+      };
+    if (phase === PHASE.SCENES)
+      return {
+        label: "Generate Sketches",
+        handler: handleGenerateSketches,
+        loading: generatingSketches,
+      };
+    if (phase === PHASE.SKETCHES)
+      return {
+        label: "Generate Final Images",
+        handler: handleGenerateImages,
+        loading: generatingImages,
+      };
     return null;
-  }, [phase, generatingScript, generatingSketches, generatingImages, selectedProjectId, prompt]);
+  }, [
+    phase,
+    generatingScript,
+    generatingSketches,
+    generatingImages,
+    selectedProjectId,
+    prompt,
+  ]);
 
   const currentPhaseIdx = phaseIndex(phase);
 
   // Show loading skeleton while project data is being fetched
-  const showLoadingSkeleton = selectedProjectId && isLoadingProject && lastLoadedProjectId.current !== selectedProjectId;
+  const showLoadingSkeleton =
+    selectedProjectId &&
+    isLoadingProject &&
+    lastLoadedProjectId.current !== selectedProjectId;
 
   return (
     <section ref={sectionRef} className="dashboard-section">
@@ -250,7 +460,7 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
             ))}
           </div>
           {/* Prompt card skeleton */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 max-w-[800px] mx-auto">
+          <div className="rounded-xl border border-border bg-card p-6 max-w-[800px] mx-auto">
             <Skeleton className="h-3 w-48 mb-4 rounded" />
             <Skeleton className="h-28 w-full mb-4 rounded-lg" />
             <div className="flex justify-center">
@@ -265,7 +475,10 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 border-l-[3px] border-l-violet-500/60">
+                <div
+                  key={i}
+                  className="rounded-xl border border-border bg-card p-4 border-l-[3px] border-l-primary/60"
+                >
                   <Skeleton className="h-4 w-28 mb-3 rounded" />
                   <Skeleton className="h-3 w-full mb-2 rounded" />
                   <Skeleton className="h-3 w-full mb-2 rounded" />
@@ -281,258 +494,288 @@ export default function UploadScriptSection({ sectionRef, selectedProjectId, onP
           </div>
         </div>
       ) : (
-      <>
-
-      {/* Phase Stepper */}
-      <div className="phase-stepper">
-        {PHASE_STEPS.map((step, idx) => {
-          const isCompleted = idx < currentPhaseIdx;
-          const isCurrent = idx === currentPhaseIdx;
-          return (
-            <div key={step.key} className={`phase-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}>
-              <div className="phase-step-circle">
-                {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : step.number}
-              </div>
-              <span className="phase-step-label">{step.label}</span>
-              {idx < PHASE_STEPS.length - 1 && <ChevronRight className="phase-step-separator w-3.5 h-3.5" />}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Prompt Area */}
-      <Card className="script-card">
-        <CardContent className="script-content">
-          {promptCollapsed ? (
-            <div className="prompt-collapsed">
-              <div className="prompt-collapsed-text">
-                <span className="prompt-collapsed-label">Your prompt</span>
-                <p className="prompt-collapsed-value">{prompt}</p>
-              </div>
-              <Button variant="outline" size="sm" className="prompt-edit-btn" onClick={handleEditPrompt}>
-                <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                Edit
-              </Button>
-            </div>
-          ) : (
-            <div className="script-upload-area">
-              <div className="paste-script">
-                <p>Describe your script idea or enter a prompt</p>
-                <Textarea
-                  placeholder="e.g. A 30-second commercial about a futuristic coffee shop with a robot barista..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="script-textarea"
-                  rows={5}
-                />
-                {prompt.length > 0 && (
-                  <div className="text-right mt-1">
-                    <span className="text-xs text-zinc-600">{prompt.length} characters</span>
+        <>
+          {/* Phase Stepper */}
+          <div className="phase-stepper">
+            {PHASE_STEPS.map((step, idx) => {
+              const isCompleted = idx < currentPhaseIdx;
+              const isCurrent = idx === currentPhaseIdx;
+              return (
+                <div
+                  key={step.key}
+                  className={`phase-step ${isCompleted ? "completed" : ""} ${isCurrent ? "current" : ""}`}
+                >
+                  <div className="phase-step-circle">
+                    {isCompleted ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      step.number
+                    )}
                   </div>
+                  <span className="phase-step-label">{step.label}</span>
+                  {idx < PHASE_STEPS.length - 1 && (
+                    <ChevronRight className="phase-step-separator w-3.5 h-3.5" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Prompt Area */}
+          <Card className="script-card">
+            <CardContent className="script-content">
+              {promptCollapsed ? (
+                <div className="prompt-collapsed">
+                  <div className="prompt-collapsed-text">
+                    <span className="prompt-collapsed-label">Your prompt</span>
+                    <p className="prompt-collapsed-value">{prompt}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="prompt-edit-btn"
+                    onClick={handleEditPrompt}
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                    Edit
+                  </Button>
+                </div>
+              ) : (
+                <div className="script-upload-area">
+                  <div className="paste-script">
+                    <p>Describe your script idea or enter a prompt</p>
+                    <Textarea
+                      placeholder="e.g. A 30-second commercial about a futuristic coffee shop with a robot barista..."
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      className="script-textarea"
+                      rows={5}
+                    />
+                    {prompt.length > 0 && (
+                      <div className="text-right mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {prompt.length} characters
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {primaryAction && (
+                <div className="script-actions">
+                  <Button
+                    className="generate-storyboard-btn"
+                    onClick={primaryAction.handler}
+                    disabled={isBusy}
+                  >
+                    {primaryAction.loading ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin mr-2" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        {primaryAction.label}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Scene Grid */}
+          {frames.length > 0 && currentPhaseIdx >= phaseIndex(PHASE.SCENES) && (
+            <div className="storyboard-area">
+              <div className="storyboard-area-header flex flex-wrap items-center gap-2 justify-between">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="subsection-title">Scenes</h3>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                    {frames.length}
+                  </span>
+                  {showCustomStoryboardUpload && (
+                    <>
+                      <input
+                        ref={storyboardFileInputRef}
+                        type="file"
+                        accept={SKETCH_ACCEPT}
+                        multiple
+                        className="hidden"
+                        onChange={handleCustomStoryboardFiles}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={() => storyboardFileInputRef.current?.click()}
+                        title="First file = scene 1, second = scene 2, etc."
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        Replace with my sketches
+                      </Button>
+                    </>
+                  )}
+                  {canDownloadAllSketches && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadAllSketches}
+                      title="Download all sketches as a zip"
+                    >
+                      <Archive className="w-3.5 h-3.5 mr-1.5" />
+                      Download all sketches
+                    </Button>
+                  )}
+                </div>
+                {phase !== PHASE.PROMPT && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="restart-btn"
+                    onClick={handleRestart}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Start Over
+                  </Button>
                 )}
               </div>
-            </div>
-          )}
-
-          {primaryAction && (
-            <div className="script-actions">
-              <Button
-                className="generate-storyboard-btn"
-                onClick={primaryAction.handler}
-                disabled={isBusy}
-              >
-                {primaryAction.loading ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin mr-2" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    {primaryAction.label}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Scene Grid */}
-      {frames.length > 0 && currentPhaseIdx >= phaseIndex(PHASE.SCENES) && (
-        <div className="storyboard-area">
-          <div className="storyboard-area-header">
-            <div className="flex items-center gap-2.5">
-              <h3 className="subsection-title">Scenes</h3>
-              <span className="text-xs font-medium text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-md">
-                {frames.length}
-              </span>
-            </div>
-            {phase !== PHASE.PROMPT && (
-              <Button variant="ghost" size="sm" className="restart-btn" onClick={handleRestart}>
-                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                Start Over
-              </Button>
-            )}
-          </div>
-
-          <div className="storyboard-grid">
-            {frames.map((frame) => (
-              <SceneScriptCard
-                key={frame.id}
-                frame={frame}
-                onView={setSelectedFrame}
-                onRegenerate={setRegenerateFrame}
-                onToggleLock={toggleLock}
-                workflowPhase={phase}
-                generatingSketches={generatingSketches}
-                generatingImages={generatingImages}
-              />
-            ))}
-          </div>
-
-          <div className="storyboard-global-actions">
-            {phase === PHASE.IMAGES && (
-              <Button className="proceed-video-btn" onClick={onProceedToVideo}>
-                Proceed to Video
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Frame Details Modal */}
-      <Dialog open={!!selectedFrame} onOpenChange={() => setSelectedFrame(null)}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 p-0 rounded-xl overflow-hidden max-h-[85vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-zinc-800 flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <h3 className="text-base font-semibold text-white">Scene {selectedFrame?.sequenceOrder}</h3>
-              <Badge
-                className={`px-2 py-0.5 rounded-md font-medium flex items-center gap-1.5 text-[11px] ${
-                  selectedFrame?.status === 'completed' || selectedFrame?.status === 'LORA_PROCESSED'
-                    ? 'bg-emerald-600/80 text-white'
-                    : selectedFrame?.status === 'processing' || selectedFrame?.status === 'SKETCHED'
-                    ? 'bg-blue-600/80 text-white'
-                    : selectedFrame?.status === 'pending' || selectedFrame?.status === 'PENDING'
-                    ? 'bg-amber-600/80 text-white'
-                    : 'bg-zinc-700/80 text-zinc-300'
-                }`}
-              >
-                {(selectedFrame?.status === 'completed' || selectedFrame?.status === 'LORA_PROCESSED') && <CheckCircle2 className="w-3 h-3" />}
-                {(selectedFrame?.status === 'processing' || selectedFrame?.status === 'SKETCHED') && <Loader className="w-3 h-3 animate-spin" />}
-                {(selectedFrame?.status === 'pending' || selectedFrame?.status === 'PENDING') && <AlertCircle className="w-3 h-3" />}
-                <span className="capitalize">{selectedFrame?.status}</span>
-              </Badge>
-            </div>
-          </div>
-
-          {/* Scrollable Content */}
-          <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-            {selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl ? (
-              <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
-                <img
-                  src={selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl}
-                  alt={`Scene ${selectedFrame?.sequenceOrder}`}
-                  className="w-full object-contain max-h-[400px]"
-                />
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Script Text</h4>
-              <p className="text-sm text-zinc-300 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
-                {selectedFrame?.scriptText}
-              </p>
-            </div>
-
-            {selectedFrame?.aiPrompt && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">AI Prompt</h4>
-                <p className="text-sm text-zinc-400 bg-zinc-900 p-3.5 rounded-lg border border-zinc-800 leading-relaxed break-words">
-                  {selectedFrame?.aiPrompt}
+              {showCustomStoryboardUpload && (
+                <p className="text-xs text-muted-foreground mb-3 max-w-2xl">
+                  Upload exactly {frames.length} images (PNG, JPEG, or WEBP, max 10 MB each), in scene order — first file
+                  for scene 1, second for scene 2, and so on. This replaces the AI-generated sketches.
                 </p>
+              )}
+
+              <div className="storyboard-grid">
+                {frames.map((frame) => (
+                  <SceneScriptCard
+                    key={frame.id}
+                    frame={frame}
+                    onView={openLightbox}
+                    onDownloadSketch={handleDownloadSketchForFrame}
+                    onRegenerate={setRegenerateFrame}
+                    onToggleLock={toggleLock}
+                    workflowPhase={phase}
+                    generatingSketches={generatingSketches}
+                    generatingImages={generatingImages}
+                  />
+                ))}
               </div>
-            )}
 
-            {!(selectedFrame?.finalImageUrl || selectedFrame?.sketchUrl) && (
-              <p className="text-xs text-zinc-500 border border-zinc-800/80 bg-zinc-900/60 rounded-lg px-3 py-2">
-                No storyboard image yet. Continue the flow to generate sketches, then final frames.
-              </p>
-            )}
+              <div className="storyboard-global-actions">
+                {phase === PHASE.IMAGES && (
+                  <Button
+                    className="proceed-video-btn"
+                    onClick={onProceedToVideo}
+                  >
+                    Proceed to Video
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
-            {selectedFrame?.sketchUrl && selectedFrame?.finalImageUrl && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Sketch</h4>
-                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
-                  <img src={selectedFrame.sketchUrl} alt="Sketch" className="w-full object-contain max-h-[300px]" />
+          <StoryboardImageLightbox
+            open={Boolean(lightbox)}
+            onOpenChange={(open) => !open && setLightbox(null)}
+            frame={lightbox?.frame ?? null}
+            projectId={selectedProjectId}
+            initialTab={lightbox?.initialTab ?? "final"}
+            feedbackList={feedbackList}
+            onRegenerate={(frame) => {
+              setLightbox(null);
+              setRegenerateFrame(frame);
+            }}
+          />
+
+          {/* Regenerate Scene Modal */}
+          <Dialog
+            open={!!regenerateFrame}
+            onOpenChange={() => {
+              setRegenerateFrame(null);
+              setRegeneratePrompt("");
+            }}
+          >
+            <DialogContent className="bg-background border-border max-w-md rounded-xl">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground mb-1">
+                    Regenerate Scene
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Enter a new prompt for Scene{" "}
+                    {regenerateFrame?.sequenceOrder}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Prompt
+                  </label>
+                  <Textarea
+                    value={regeneratePrompt}
+                    onChange={(e) => setRegeneratePrompt(e.target.value)}
+                    placeholder="Describe what you'd like for this scene..."
+                    className="bg-background border-border text-foreground resize-none rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-2.5 justify-end pt-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setRegenerateFrame(null);
+                      setRegeneratePrompt("");
+                    }}
+                    className="text-muted-foreground hover:text-foreground hover:bg-accent h-9"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (regeneratePrompt.trim() && regenerateFrame?.id) {
+                        regenerateMutation.mutate(
+                          {
+                            sceneId: regenerateFrame.id,
+                            prompt: regeneratePrompt,
+                          },
+                          {
+                            onSuccess: () => {
+                              setRegenerateFrame(null);
+                              setRegeneratePrompt("");
+                            },
+                          },
+                        );
+                      }
+                    }}
+                    disabled={
+                      !regeneratePrompt.trim() || regenerateMutation.isPending
+                    }
+                    className="btn-gradient-primary h-9"
+                  >
+                    {regenerateMutation.isPending ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2" />
+                        Redo
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Regenerate Scene Modal */}
-      <Dialog open={!!regenerateFrame} onOpenChange={() => { setRegenerateFrame(null); setRegeneratePrompt(''); }}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md rounded-xl">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold text-white mb-1">Regenerate Scene</h3>
-              <p className="text-sm text-zinc-500">Enter a new prompt for Scene {regenerateFrame?.sequenceOrder}</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt</label>
-              <Textarea
-                value={regeneratePrompt}
-                onChange={(e) => setRegeneratePrompt(e.target.value)}
-                placeholder="Describe what you'd like for this scene..."
-                className="bg-zinc-900 border-zinc-800 text-white resize-none rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-zinc-600"
-                rows={4}
-              />
-            </div>
-
-            <div className="flex gap-2.5 justify-end pt-3">
-              <Button
-                variant="ghost"
-                onClick={() => { setRegenerateFrame(null); setRegeneratePrompt(''); }}
-                className="text-zinc-400 hover:text-white hover:bg-zinc-800 h-9"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (regeneratePrompt.trim() && regenerateFrame?.id) {
-                    regenerateMutation.mutate(
-                      { sceneId: regenerateFrame.id, prompt: regeneratePrompt },
-                      {
-                        onSuccess: () => {
-                          setRegenerateFrame(null);
-                          setRegeneratePrompt('');
-                        },
-                      }
-                    );
-                  }
-                }}
-                disabled={!regeneratePrompt.trim() || regenerateMutation.isPending}
-                className="bg-violet-600 hover:bg-violet-700 text-white h-9"
-              >
-                {regenerateMutation.isPending ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  'Regenerate'
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      </>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     </section>
   );

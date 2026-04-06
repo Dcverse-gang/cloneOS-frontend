@@ -21,21 +21,23 @@ import QueryProvider from "./provider/QueryProvider";
 window.addEventListener(
   "error",
   (e) => {
-    if (e.message === "ResizeObserver loop completed with undelivered notifications.") {
+    if (
+      e.message ===
+      "ResizeObserver loop completed with undelivered notifications."
+    ) {
       e.stopImmediatePropagation();
       e.preventDefault();
       return true;
     }
   },
-  true
+  true,
 );
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
+// StrictMode omitted: dev double-mount can make animated route trees feel like they load twice.
 root.render(
-  <React.StrictMode>
-    <QueryProvider>
-      <App />
-    </QueryProvider>
-  </React.StrictMode>,
+  <QueryProvider>
+    <App />
+  </QueryProvider>,
 );

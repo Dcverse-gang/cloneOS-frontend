@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { ImageIcon, Eye, RotateCw, Lock, Unlock, Loader, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ImageIcon, Eye, RotateCw, Lock, Unlock, Loader, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 
 function statusPillClasses(status) {
   const s = String(status || '').toLowerCase();
@@ -56,6 +56,7 @@ function visualHintText(workflowPhase, generatingSketches, generatingImages) {
 export default function SceneScriptCard({
   frame,
   onView,
+  onDownloadSketch,
   onRegenerate,
   onToggleLock,
   workflowPhase,
@@ -105,10 +106,31 @@ export default function SceneScriptCard({
         </div>
 
         <div className="frame-actions mt-3">
-          <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => onView(frame)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="frame-action-btn"
+            onClick={() =>
+              onView(frame, {
+                tab: frame.finalImageUrl ? 'final' : 'sketch',
+              })
+            }
+          >
             <Eye className="mr-1 h-3.5 w-3.5" />
             View
           </Button>
+          {frame.sketchUrl && typeof onDownloadSketch === 'function' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="frame-action-btn"
+              onClick={() => onDownloadSketch(frame)}
+              title="Download sketch"
+            >
+              <Download className="mr-1 h-3.5 w-3.5" />
+              Sketch
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => onRegenerate(frame)}>
             <RotateCw className="mr-1 h-3.5 w-3.5" />
             Redo

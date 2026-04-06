@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { Dialog, DialogContent } from '../../../components/ui/dialog';
 import { Badge } from '../../../components/ui/badge';
 import { Textarea } from '../../../components/ui/textarea';
-import { Film, Lock, Unlock, Loader, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Film, Lock, Unlock, Loader, CheckCircle2, AlertCircle, RotateCw } from 'lucide-react';
 import { useStoryboardStore, useStoryboardFrames } from '../../../store/storyboard.store';
 import { useRegenerateScene } from '../../../services/project.service';
 
@@ -15,6 +15,11 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
   const [regenerateFrame, setRegenerateFrame] = useState(null);
   const [regeneratePrompt, setRegeneratePrompt] = useState('');
   const regenerateMutation = useRegenerateScene();
+
+  useEffect(() => {
+    if (!regenerateFrame) return;
+    setRegeneratePrompt(String(regenerateFrame.aiPrompt || regenerateFrame.scriptText || '').trim());
+  }, [regenerateFrame?.id]);
 
   useEffect(() => {
     onFramesChange?.(frames);
@@ -31,7 +36,7 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
       </div>
       <div className="storyboard-grid">
         {frames.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-8">
+          <div className="col-span-full text-center text-muted-foreground py-8">
             No storyboard scenes yet. Generate from your script to see scenes here.
           </div>
         ) : (
@@ -73,11 +78,11 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
 
       {/* Frame Details Modal */}
       <Dialog open={!!selectedFrame} onOpenChange={() => setSelectedFrame(null)}>
-        <DialogContent className="max-w-4xl bg-black border-gray-800 h-[400px] p-0">
+        <DialogContent className="max-w-4xl bg-background border-border h-[400px] p-0">
           {/* Top Left Badges */}
           <div className="absolute top-4 left-4 flex gap-2 z-10">
             {/* Scene Number Badge */}
-            <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-3 py-1 rounded-full font-semibold flex items-center gap-2 shadow-lg">
+            <Badge className="badge-gradient-primary px-3 py-1 rounded-full font-semibold flex items-center gap-2 shadow-lg">
               <span className="text-xs">🎬</span>
               Scene {selectedFrame?.sequenceOrder}
             </Badge>
@@ -91,7 +96,7 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
                   ? 'bg-blue-600/80 text-white'
                   : selectedFrame?.status === 'pending'
                   ? 'bg-yellow-600/80 text-white'
-                  : 'bg-gray-700/80 text-gray-200'
+                  : 'bg-secondary/90 text-secondary-foreground'
               }`}
             >
               {selectedFrame?.status === 'completed' && <CheckCircle2 className="w-4 h-4" />}
@@ -103,13 +108,13 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
 
           <div className="flex gap-6 h-[inherit]">
             {/* Left Side - Image */}
-            <div className="w-1/2 flex flex-col items-center justify-center bg-gray-900  overflow-hidden">
+            <div className="w-1/2 flex flex-col items-center justify-center bg-muted/60 overflow-hidden">
               {selectedFrame?.sketchUrl ? (
                 <img src={selectedFrame.sketchUrl} alt={`Scene ${selectedFrame?.sequenceOrder}`} className="w-full h-full object-cover" />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full">
-                  <Film className="w-12 h-12 text-gray-600 mb-2" />
-                  <p className="text-gray-400 text-sm">No image available</p>
+                  <Film className="w-12 h-12 text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">No image available</p>
                 </div>
               )}
             </div>
@@ -117,25 +122,41 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
             {/* Right Side - Scrollable Content */}
             <div className="w-1/2 overflow-y-auto pr-4 space-y-4 pt-12">
               <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => {
+                      if (!selectedFrame) return;
+                      setRegenerateFrame(selectedFrame);
+                      setSelectedFrame(null);
+                    }}
+                  >
+                    <RotateCw className="w-4 h-4" />
+                    Redo
+                  </Button>
+                </div>
                 {/* Script Text */}
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-sm text-white">Script Text</h3>
-                  <p className="text-sm text-gray-300 bg-gray-900 p-3 rounded border border-gray-800">{selectedFrame?.scriptText}</p>
+                  <h3 className="font-semibold text-sm text-foreground">Script Text</h3>
+                  <p className="text-sm text-foreground bg-card p-3 rounded border border-border">{selectedFrame?.scriptText}</p>
                 </div>
 
                 {/* AI Prompt */}
               {selectedFrame?.aiPrompt &&  <div className="space-y-2">
-                  <h3 className="font-semibold text-sm text-white">AI Prompt</h3>
-                  <p className="text-sm text-gray-300 bg-gray-900 p-3 rounded border border-gray-800">{selectedFrame?.aiPrompt}</p>
+                  <h3 className="font-semibold text-sm text-foreground">AI Prompt</h3>
+                  <p className="text-sm text-muted-foreground bg-card p-3 rounded border border-border">{selectedFrame?.aiPrompt}</p>
                 </div>}
 
               
 
                 {/* Final Image */}
                 {selectedFrame?.finalImageUrl && (
-                  <div className="space-y-2 pt-2 border-t border-gray-800">
-                    <h3 className="font-semibold text-sm text-white">Final Image</h3>
-                    <img src={selectedFrame.finalImageUrl} alt="Final" className="w-full rounded-lg border border-gray-800" />
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <h3 className="font-semibold text-sm text-foreground">Final Image</h3>
+                    <img src={selectedFrame.finalImageUrl} alt="Final" className="w-full rounded-lg border border-border" />
                   </div>
                 )}
               </div>
@@ -149,20 +170,20 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
         setRegenerateFrame(null);
         setRegeneratePrompt('');
       }}>
-        <DialogContent className="bg-black border-gray-800 max-w-md">
+        <DialogContent className="bg-background border-border max-w-md">
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Regenerate Scene</h3>
-              <p className="text-sm text-gray-400">Enter a prompt for Scene {regenerateFrame?.sequenceOrder}</p>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Regenerate Scene</h3>
+              <p className="text-sm text-muted-foreground">Enter a prompt for Scene {regenerateFrame?.sequenceOrder}</p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Prompt</label>
+              <label className="text-sm font-medium text-foreground">Prompt</label>
               <Textarea
                 value={regeneratePrompt}
                 onChange={(e) => setRegeneratePrompt(e.target.value)}
                 placeholder="Describe what you'd like for this scene..."
-                className="bg-gray-900 border-gray-700 text-white resize-none"
+                className="bg-background border-border text-foreground resize-none"
                 rows={4}
               />
             </div>
@@ -174,7 +195,7 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
                   setRegenerateFrame(null);
                   setRegeneratePrompt('');
                 }}
-                className="bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="bg-background border-border text-muted-foreground hover:bg-accent"
               >
                 Cancel
               </Button>
@@ -193,7 +214,7 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
                   }
                 }}
                 disabled={!regeneratePrompt.trim() || regenerateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="btn-gradient-primary"
               >
                 {regenerateMutation.isPending ? (
                   <>
@@ -201,7 +222,10 @@ export default function StoryboardSection({ sectionRef, onFramesChange, onProcee
                     Regenerating...
                   </>
                 ) : (
-                  'Regenerate'
+                  <>
+                    <RotateCw className="w-4 h-4 mr-2" />
+                    Redo
+                  </>
                 )}
               </Button>
             </div>

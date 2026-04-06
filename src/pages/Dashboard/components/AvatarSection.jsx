@@ -126,7 +126,7 @@ export default function AvatarSection({
             <p>Error loading actors. Please try again.</p>
           </div>
         ) : actors.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-8">
+          <div className="col-span-full text-center text-muted-foreground py-8">
             <p>No actors available</p>
           </div>
         ) : (
