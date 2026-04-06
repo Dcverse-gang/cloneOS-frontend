@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +15,14 @@ import {
   ThumbsDown,
   Download,
   RotateCw,
+  Upload,
 } from 'lucide-react';
 import { useSubmitSceneFeedback } from '../../services/project.service';
 import { useToast } from '../../hooks/use-toast';
-import { downloadImageFromUrl } from '../../utils/storyboardAssets';
+import {
+  downloadImageFromUrl,
+  downloadSketchFile,
+} from '../../utils/storyboardAssets';
 
 function findFeedbackForScene(feedbackList, sceneId, imageType) {
   if (!feedbackList?.length || !sceneId) return null;
@@ -37,6 +41,11 @@ export default function StoryboardImageLightbox({
   initialTab = 'final',
   feedbackList = [],
   onRegenerate,
+  onUploadSketch,
+  showSketchUpload = false,
+  sketchUploadDisabled = false,
+  /** When false, hide sketch/final download (e.g. on Images step; use Sketches step for downloads). */
+  showSketchDownloads = true,
 }) {
   const { toast } = useToast();
   const submitFeedback = useSubmitSceneFeedback();
@@ -71,6 +80,9 @@ export default function StoryboardImageLightbox({
 
   const [rating, setRating] = useState(null);
   const [comment, setComment] = useState('');
+  const sketchFileInputRef = useRef(null);
+  const [sketchUploadLoading, setSketchUploadLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   useEffect(() => {
     if (existing) {
@@ -82,11 +94,33 @@ export default function StoryboardImageLightbox({
     }
   }, [existing, imageType, frame?.id]);
 
-  const handleDownloadCurrent = () => {
-    if (!imageUrl || !frame) return;
-    const kind = imageType === 'sketch' ? 'sketch' : 'final';
-    const base = `scene-${frame.sequenceOrder}-${kind}`;
-    downloadImageFromUrl(imageUrl, `${base}.png`);
+  const handleDownloadCurrent = async () => {
+    if (!frame || downloadLoading) return;
+    setDownloadLoading(true);
+    try {
+      if (imageType === 'sketch') {
+        if (!frame.sketchUrl || !frame.id) return;
+        await downloadSketchFile(
+          frame.id,
+          `scene-${frame.sequenceOrder}-sketch.png`,
+        );
+        return;
+      }
+      if (!imageUrl) return;
+      const base = `scene-${frame.sequenceOrder}-final`;
+      await downloadImageFromUrl(imageUrl, `${base}.png`);
+    } catch (err) {
+      toast({
+        title: 'Download failed',
+        description:
+          err?.response?.data?.error ||
+          err?.message ||
+          'Could not download this image.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
   const handleSubmitFeedback = () => {
@@ -128,7 +162,7 @@ export default function StoryboardImageLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(96vw,1200px)] w-[min(96vw,1200px)] max-h-[90vh] bg-background border-border p-0 rounded-xl overflow-hidden flex flex-col gap-0">
+      <DialogContent className="storyboard-view-dialog max-w-[min(96vw,1200px)] w-[min(96vw,1200px)] bg-background border-border p-0 rounded-xl overflow-hidden flex flex-col gap-0">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border flex-shrink-0 pr-14">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h3 className="text-base font-semibold text-foreground">
@@ -205,19 +239,75 @@ export default function StoryboardImageLightbox({
             </p>
           )}
 
-          {(imageUrl || (typeof onRegenerate === 'function' && frame)) && (
+          {((imageUrl && showSketchDownloads) ||
+            (typeof onRegenerate === 'function' && frame) ||
+            (imageType === 'sketch' &&
+              showSketchUpload &&
+              typeof onUploadSketch === 'function')) && (
             <div className="flex flex-wrap gap-2">
-              {imageUrl && (
+              {imageUrl && showSketchDownloads && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={downloadLoading}
                   onClick={handleDownloadCurrent}
+                  title={downloadLoading ? 'Downloading…' : undefined}
                 >
-                  <Download className="w-4 h-4 mr-1.5" />
-                  Download {imageType === 'sketch' ? 'sketch' : 'image'}
+                  {downloadLoading ? (
+                    <Loader className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-1.5" />
+                  )}
+                  {downloadLoading
+                    ? 'Downloading…'
+                    : `Download ${imageType === 'sketch' ? 'sketch' : 'image'}`}
                 </Button>
               )}
+              {imageType === 'sketch' &&
+                showSketchUpload &&
+                typeof onUploadSketch === 'function' && (
+                  <>
+                    <input
+                      ref={sketchFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        setSketchUploadLoading(true);
+                        try {
+                          await onUploadSketch(frame, file);
+                        } finally {
+                          setSketchUploadLoading(false);
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={sketchUploadLoading || sketchUploadDisabled}
+                      onClick={() => sketchFileInputRef.current?.click()}
+                      title={
+                        sketchUploadLoading
+                          ? 'Uploading…'
+                          : sketchUploadDisabled
+                            ? 'Wait for the current generation to finish'
+                            : 'Upload or replace sketch for this scene'
+                      }
+                    >
+                      {sketchUploadLoading ? (
+                        <Loader className="w-4 h-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4 mr-1.5" />
+                      )}
+                      {sketchUploadLoading ? 'Uploading…' : 'Upload sketch'}
+                    </Button>
+                  </>
+                )}
               {typeof onRegenerate === 'function' && frame && (
                 <Button
                   type="button"

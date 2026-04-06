@@ -2933,6 +2933,37 @@ button:active:not(:disabled) {
   gap: 1.75rem;
 }
 
+/* Storyboard view lightbox: below sticky header, centered in viewport band (wider than .vv-modal) */
+.storyboard-view-dialog {
+  --sb-modal-header-clearance: 56px;
+  --sb-modal-gap-top: 0.75rem;
+  --sb-modal-gap-bottom: 1rem;
+  --sb-modal-gap-x: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  width: min(1200px, calc(100vw - 2 * var(--sb-modal-gap-x))) !important;
+  max-width: min(1200px, calc(100vw - 2 * var(--sb-modal-gap-x))) !important;
+  max-height: calc(
+    100dvh - var(--sb-modal-header-clearance) - var(--sb-modal-gap-top) -
+      var(--sb-modal-gap-bottom)
+  ) !important;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(
+    var(--sb-modal-header-clearance) + var(--sb-modal-gap-top)
+  ) !important;
+  bottom: var(--sb-modal-gap-bottom) !important;
+  margin: auto !important;
+  height: fit-content;
+  transform: none !important;
+}
+
 .vv-modal-section {
   display: flex;
   flex-direction: column;

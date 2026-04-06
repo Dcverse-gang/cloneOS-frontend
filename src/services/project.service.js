@@ -3,6 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const prefix = '/projects';
 
+/** Authenticated blob download for a scene sketch (avoids S3 CORS in the browser). */
+export async function downloadSceneSketchBlob(sceneId) {
+  const res = await authAxios.get(
+    `${prefix}/scenes/${sceneId}/sketch-download`,
+    { responseType: 'blob' },
+  );
+  return res.data;
+}
+
 // Low-level API
 export const projectApi = () => {
   // Create a new project
@@ -51,6 +60,20 @@ export const projectApi = () => {
     });
   };
 
+  /** Per-scene sketch upload (multipart, field name: sketch) */
+  const uploadSceneSketch = async (sceneId, file) => {
+    const formData = new FormData();
+    formData.append('sketch', file);
+    return authAxios.post(`${prefix}/scenes/${sceneId}/sketch`, formData, {
+      transformRequest: [
+        (data, headers) => {
+          delete headers['Content-Type'];
+          return data;
+        },
+      ],
+    });
+  };
+
   const submitSceneFeedback = async (sceneId, body) =>
     authAxios.post(`${prefix}/scenes/${sceneId}/feedback`, body);
 
@@ -67,6 +90,7 @@ export const projectApi = () => {
     regenerateScene,
     renderVideo,
     uploadStoryboard,
+    uploadSceneSketch,
     submitSceneFeedback,
     getProjectFeedback,
   };
@@ -234,6 +258,29 @@ export function useUploadStoryboard(options = {}) {
       queryClient.invalidateQueries({
         queryKey: ['projects', variables.projectId],
       });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Upload a sketch for a single scene (POST /projects/scenes/:sceneId/sketch)
+ */
+export function useUploadSceneSketch(options = {}) {
+  const { uploadSceneSketch } = projectApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sceneId, projectId, file }) =>
+      uploadSceneSketch(sceneId, file).then(
+        (res) => res.data?.data ?? res.data,
+      ),
+    onSuccess: (data, variables) => {
+      if (variables.projectId) {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId],
+        });
+      }
     },
     ...options,
   });

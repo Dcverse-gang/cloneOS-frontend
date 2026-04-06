@@ -14,7 +14,6 @@ import {
   Pencil,
   ChevronRight,
   ArrowRight,
-  Upload,
   Archive,
   RotateCw,
 } from "lucide-react";
@@ -26,12 +25,9 @@ import {
   useGenerateImages,
   useRegenerateScene,
   useGetProjectFeedback,
-  useUploadStoryboard,
+  useUploadSceneSketch,
 } from "../../../services/project.service";
-import {
-  downloadImageFromUrl,
-  downloadSketchesZip,
-} from "../../../utils/storyboardAssets";
+import { downloadSketchFile, downloadSketchesZip } from "../../../utils/storyboardAssets";
 import {
   useStoryboardStore,
   useStoryboardFrames,
@@ -69,8 +65,6 @@ export default function UploadScriptSection({
   const [phase, setPhase] = useState(PHASE.PROMPT);
   const [promptCollapsed, setPromptCollapsed] = useState(false);
   const lastLoadedProjectId = useRef(null);
-  const storyboardFileInputRef = useRef(null);
-
   // Zustand store
   const frames = useStoryboardFrames();
   const { setFrames, updateFrame, clearFrames } = useStoryboardStore();
@@ -89,11 +83,14 @@ export default function UploadScriptSection({
   const { mutateAsync: generateImages, isPending: generatingImages } =
     useGenerateImages();
   const regenerateMutation = useRegenerateScene();
-  const { mutateAsync: uploadStoryboard, isPending: uploadingStoryboard } =
-    useUploadStoryboard();
+  const {
+    mutateAsync: uploadSceneSketchAsync,
+    isPending: uploadingSceneSketch,
+  } = useUploadSceneSketch();
 
   // Modal state
   const [lightbox, setLightbox] = useState(null);
+  const [downloadingAllSketches, setDownloadingAllSketches] = useState(false);
   const [regenerateFrame, setRegenerateFrame] = useState(null);
   const [regeneratePrompt, setRegeneratePrompt] = useState("");
 
@@ -110,12 +107,10 @@ export default function UploadScriptSection({
     generatingScript ||
     generatingSketches ||
     generatingImages ||
-    uploadingStoryboard;
+    uploadingSceneSketch;
 
-  const showCustomStoryboardUpload =
-    phase === PHASE.SKETCHES &&
-    frames.length > 0 &&
-    frames.every((f) => f.sketchUrl);
+  const showPerSceneSketchUpload =
+    phase === PHASE.SKETCHES && frames.length > 0;
 
   const canDownloadAllSketches =
     frames.length > 0 && frames.every((f) => f.sketchUrl);
@@ -312,15 +307,27 @@ export default function UploadScriptSection({
     });
   };
 
-  const handleDownloadSketchForFrame = (frame) => {
-    if (!frame?.sketchUrl) return;
-    downloadImageFromUrl(
-      frame.sketchUrl,
-      `scene-${frame.sequenceOrder}-sketch.png`
-    );
+  const handleDownloadSketchForFrame = async (frame) => {
+    if (!frame?.sketchUrl || !frame?.id) return;
+    try {
+      await downloadSketchFile(
+        frame.id,
+        `scene-${frame.sequenceOrder}-sketch.png`,
+      );
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description:
+          error?.response?.data?.error ||
+          error?.message ||
+          "Could not download this sketch.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownloadAllSketches = async () => {
+    setDownloadingAllSketches(true);
     try {
       await downloadSketchesZip(frames);
       toast({
@@ -333,60 +340,59 @@ export default function UploadScriptSection({
         description: e?.message || "Could not build the zip.",
         variant: "destructive",
       });
+    } finally {
+      setDownloadingAllSketches(false);
     }
   };
 
-  const handleCustomStoryboardFiles = async (event) => {
-    const fileList = event.target.files;
-    if (!fileList?.length || !selectedProjectId) {
-      event.target.value = "";
-      return;
-    }
-    const files = Array.from(fileList);
-    if (files.length !== frames.length) {
+  const handleUploadSceneSketch = async (frame, file) => {
+    if (!selectedProjectId || !frame?.id) return;
+    if (file.size > MAX_SKETCH_FILE_BYTES) {
       toast({
-        title: "Wrong number of files",
-        description: `Upload exactly ${frames.length} images (one per scene in order). You selected ${files.length}.`,
+        title: "File too large",
+        description: `Each image must be at most 10 MB. "${file.name}" is too large.`,
         variant: "destructive",
       });
-      event.target.value = "";
       return;
     }
-    for (let i = 0; i < files.length; i += 1) {
-      const file = files[i];
-      if (file.size > MAX_SKETCH_FILE_BYTES) {
-        toast({
-          title: "File too large",
-          description: `Each image must be at most 10 MB. "${file.name}" is too large.`,
-          variant: "destructive",
-        });
-        event.target.value = "";
-        return;
-      }
-      const okType =
-        file.type === "image/png" ||
-        file.type === "image/jpeg" ||
-        file.type === "image/webp";
-      if (!okType) {
-        toast({
-          title: "Invalid file type",
-          description: `Only PNG, JPEG, or WEBP are allowed. Got "${file.name}".`,
-          variant: "destructive",
-        });
-        event.target.value = "";
-        return;
-      }
+    const okType =
+      file.type === "image/png" ||
+      file.type === "image/jpeg" ||
+      file.type === "image/webp";
+    if (!okType) {
+      toast({
+        title: "Invalid file type",
+        description: `Only PNG, JPEG, or WEBP are allowed. Got "${file.name}".`,
+        variant: "destructive",
+      });
+      return;
     }
     try {
-      const res = await uploadStoryboard({
+      const scene = await uploadSceneSketchAsync({
+        sceneId: frame.id,
         projectId: selectedProjectId,
-        files,
+        file,
       });
-      const newFrames = parseScenes(res);
-      setFrames(newFrames);
+      updateFrame(frame.id, (f) => ({
+        ...f,
+        sketchUrl: scene.sketchUrl ?? f.sketchUrl,
+        status: scene.status ?? f.status,
+      }));
+      setLightbox((prev) =>
+        prev?.frame?.id === frame.id
+          ? {
+              ...prev,
+              frame: {
+                ...prev.frame,
+                sketchUrl: scene.sketchUrl ?? prev.frame.sketchUrl,
+                status: scene.status ?? prev.frame.status,
+              },
+            }
+          : prev,
+      );
       toast({
-        title: "Custom sketches uploaded",
-        description: "Your storyboard images replaced the generated sketches.",
+        title: "Sketch uploaded",
+        description: `Scene ${frame.sequenceOrder} was updated.`,
       });
     } catch (error) {
       const msg =
@@ -399,8 +405,6 @@ export default function UploadScriptSection({
         description: msg,
         variant: "destructive",
       });
-    } finally {
-      event.target.value = "";
     }
   };
 
@@ -595,39 +599,30 @@ export default function UploadScriptSection({
                   <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
                     {frames.length}
                   </span>
-                  {showCustomStoryboardUpload && (
-                    <>
-                      <input
-                        ref={storyboardFileInputRef}
-                        type="file"
-                        accept={SKETCH_ACCEPT}
-                        multiple
-                        className="hidden"
-                        onChange={handleCustomStoryboardFiles}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isBusy}
-                        onClick={() => storyboardFileInputRef.current?.click()}
-                        title="First file = scene 1, second = scene 2, etc."
-                      >
-                        <Upload className="w-3.5 h-3.5 mr-1.5" />
-                        Replace with my sketches
-                      </Button>
-                    </>
-                  )}
-                  {canDownloadAllSketches && (
+                  {phase === PHASE.SKETCHES && canDownloadAllSketches && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={downloadingAllSketches}
                       onClick={handleDownloadAllSketches}
-                      title="Download all sketches as a zip"
+                      title={
+                        downloadingAllSketches
+                          ? "Preparing download…"
+                          : "Download all sketches as a zip"
+                      }
                     >
-                      <Archive className="w-3.5 h-3.5 mr-1.5" />
-                      Download all sketches
+                      {downloadingAllSketches ? (
+                        <>
+                          <Loader className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          Downloading…
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="w-3.5 h-3.5 mr-1.5" />
+                          Download all sketches
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -643,12 +638,6 @@ export default function UploadScriptSection({
                   </Button>
                 )}
               </div>
-              {showCustomStoryboardUpload && (
-                <p className="text-xs text-muted-foreground mb-3 max-w-2xl">
-                  Upload exactly {frames.length} images (PNG, JPEG, or WEBP, max 10 MB each), in scene order — first file
-                  for scene 1, second for scene 2, and so on. This replaces the AI-generated sketches.
-                </p>
-              )}
 
               <div className="storyboard-grid">
                 {frames.map((frame) => (
@@ -656,7 +645,16 @@ export default function UploadScriptSection({
                     key={frame.id}
                     frame={frame}
                     onView={openLightbox}
-                    onDownloadSketch={handleDownloadSketchForFrame}
+                    onDownloadSketch={
+                      phase === PHASE.SKETCHES
+                        ? handleDownloadSketchForFrame
+                        : undefined
+                    }
+                    onUploadSketch={
+                      showPerSceneSketchUpload ? handleUploadSceneSketch : undefined
+                    }
+                    showSketchUpload={showPerSceneSketchUpload}
+                    sketchUploadDisabled={generatingSketches}
                     onRegenerate={setRegenerateFrame}
                     onToggleLock={toggleLock}
                     workflowPhase={phase}
@@ -691,6 +689,12 @@ export default function UploadScriptSection({
               setLightbox(null);
               setRegenerateFrame(frame);
             }}
+            onUploadSketch={
+              showPerSceneSketchUpload ? handleUploadSceneSketch : undefined
+            }
+            showSketchUpload={showPerSceneSketchUpload}
+            sketchUploadDisabled={generatingSketches}
+            showSketchDownloads={phase === PHASE.SKETCHES}
           />
 
           {/* Regenerate Scene Modal */}

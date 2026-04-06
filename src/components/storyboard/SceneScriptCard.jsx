@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { ImageIcon, Eye, RotateCw, Lock, Unlock, Loader, CheckCircle2, AlertCircle, Download } from 'lucide-react';
+import { ImageIcon, Eye, RotateCw, Lock, Unlock, Loader, CheckCircle2, AlertCircle, Download, Upload } from 'lucide-react';
 
 function statusPillClasses(status) {
   const s = String(status || '').toLowerCase();
@@ -57,12 +57,19 @@ export default function SceneScriptCard({
   frame,
   onView,
   onDownloadSketch,
+  onUploadSketch,
+  showSketchUpload = false,
+  /** Disable upload while global generation runs (not during a sketch upload). */
+  sketchUploadDisabled = false,
   onRegenerate,
   onToggleLock,
   workflowPhase,
   generatingSketches = false,
   generatingImages = false,
 }) {
+  const sketchFileInputRef = useRef(null);
+  const [sketchDownloadLoading, setSketchDownloadLoading] = useState(false);
+  const [sketchUploadLoading, setSketchUploadLoading] = useState(false);
   const hasVisual = Boolean(frame.finalImageUrl || frame.sketchUrl);
   const hint =
     !hasVisual && workflowPhase
@@ -119,16 +126,72 @@ export default function SceneScriptCard({
             <Eye className="mr-1 h-3.5 w-3.5" />
             View
           </Button>
+          {showSketchUpload && typeof onUploadSketch === 'function' && (
+            <>
+              <input
+                ref={sketchFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setSketchUploadLoading(true);
+                  try {
+                    await onUploadSketch(frame, file);
+                  } finally {
+                    setSketchUploadLoading(false);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="frame-action-btn"
+                disabled={sketchUploadLoading || sketchUploadDisabled}
+                onClick={() => sketchFileInputRef.current?.click()}
+                title={
+                  sketchUploadLoading
+                    ? 'Uploading…'
+                    : sketchUploadDisabled
+                      ? 'Wait for the current generation to finish'
+                      : 'Upload or replace sketch for this scene'
+                }
+              >
+                {sketchUploadLoading ? (
+                  <Loader className="mr-1 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="mr-1 h-3.5 w-3.5" />
+                )}
+                {sketchUploadLoading ? 'Uploading…' : 'Upload'}
+              </Button>
+            </>
+          )}
           {frame.sketchUrl && typeof onDownloadSketch === 'function' && (
             <Button
               size="sm"
               variant="ghost"
               className="frame-action-btn"
-              onClick={() => onDownloadSketch(frame)}
-              title="Download sketch"
+              disabled={sketchDownloadLoading}
+              onClick={async () => {
+                if (sketchDownloadLoading) return;
+                setSketchDownloadLoading(true);
+                try {
+                  await onDownloadSketch(frame);
+                } finally {
+                  setSketchDownloadLoading(false);
+                }
+              }}
+              title={sketchDownloadLoading ? 'Downloading…' : 'Download sketch'}
             >
-              <Download className="mr-1 h-3.5 w-3.5" />
-              Sketch
+              {sketchDownloadLoading ? (
+                <Loader className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-3.5 w-3.5" />
+              )}
+              {sketchDownloadLoading ? 'Downloading…' : 'Sketch'}
             </Button>
           )}
           <Button size="sm" variant="ghost" className="frame-action-btn" onClick={() => onRegenerate(frame)}>
