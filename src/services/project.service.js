@@ -3,6 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const prefix = '/projects';
 
+/** Authenticated blob download for a scene sketch (avoids S3 CORS in the browser). */
+export async function downloadSceneSketchBlob(sceneId) {
+  const res = await authAxios.get(
+    `${prefix}/scenes/${sceneId}/sketch-download`,
+    { responseType: 'blob' },
+  );
+  return res.data;
+}
+
 // Low-level API
 export const projectApi = () => {
   // Create a new project
@@ -37,6 +46,40 @@ export const projectApi = () => {
   const renderVideo = async (projectId, actorId) => 
     authAxios.post(`${prefix}/${projectId}/render`, { actorId });
 
+  // Upload user-provided storyboard sketches (multipart, field name: sketches)
+  const uploadStoryboard = async (projectId, files) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('sketches', file));
+    return authAxios.post(`${prefix}/${projectId}/storyboard`, formData, {
+      transformRequest: [
+        (data, headers) => {
+          delete headers['Content-Type'];
+          return data;
+        },
+      ],
+    });
+  };
+
+  /** Per-scene sketch upload (multipart, field name: sketch) */
+  const uploadSceneSketch = async (sceneId, file) => {
+    const formData = new FormData();
+    formData.append('sketch', file);
+    return authAxios.post(`${prefix}/scenes/${sceneId}/sketch`, formData, {
+      transformRequest: [
+        (data, headers) => {
+          delete headers['Content-Type'];
+          return data;
+        },
+      ],
+    });
+  };
+
+  const submitSceneFeedback = async (sceneId, body) =>
+    authAxios.post(`${prefix}/scenes/${sceneId}/feedback`, body);
+
+  const getProjectFeedback = async (projectId) =>
+    authAxios.get(`${prefix}/${projectId}/feedback`);
+
   return {
     createProject,
     getAllProjects,
@@ -46,6 +89,10 @@ export const projectApi = () => {
     generateImages,
     regenerateScene,
     renderVideo,
+    uploadStoryboard,
+    uploadSceneSketch,
+    submitSceneFeedback,
+    getProjectFeedback,
   };
 };
 
@@ -193,6 +240,90 @@ export function useRenderVideo(options = {}) {
         queryKey: ['projects', variables.projectId] 
       });
     },
+    ...options,
+  });
+}
+
+/**
+ * Upload custom storyboard images (one per scene, in order)
+ */
+export function useUploadStoryboard(options = {}) {
+  const { uploadStoryboard } = projectApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, files }) =>
+      uploadStoryboard(projectId, files).then((res) => res.data),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['projects', variables.projectId],
+      });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Upload a sketch for a single scene (POST /projects/scenes/:sceneId/sketch)
+ */
+export function useUploadSceneSketch(options = {}) {
+  const { uploadSceneSketch } = projectApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sceneId, projectId, file }) =>
+      uploadSceneSketch(sceneId, file).then(
+        (res) => res.data?.data ?? res.data,
+      ),
+    onSuccess: (data, variables) => {
+      if (variables.projectId) {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId],
+        });
+      }
+    },
+    ...options,
+  });
+}
+
+/**
+ * Submit or update feedback for a scene's sketch or final image
+ */
+export function useSubmitSceneFeedback(options = {}) {
+  const { submitSceneFeedback } = projectApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sceneId, projectId, imageType, rating, comment }) =>
+      submitSceneFeedback(sceneId, {
+        imageType,
+        rating,
+        ...(comment != null && comment !== '' ? { comment } : {}),
+      }).then((res) => res.data),
+    onSuccess: (data, variables) => {
+      if (variables.projectId) {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'feedback'],
+        });
+      }
+    },
+    ...options,
+  });
+}
+
+/**
+ * List all feedback for a project (scenes joined)
+ */
+export function useGetProjectFeedback(projectId, options = {}) {
+  const { getProjectFeedback } = projectApi();
+  return useQuery({
+    queryKey: ['projects', projectId, 'feedback'],
+    enabled: !!projectId,
+    queryFn: () =>
+      getProjectFeedback(projectId).then(
+        (res) => res.data?.data ?? res.data
+      ),
+    staleTime: 1000 * 60,
     ...options,
   });
 }

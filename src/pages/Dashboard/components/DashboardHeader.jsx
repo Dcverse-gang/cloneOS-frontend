@@ -45,17 +45,17 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
           {user ? (
             <>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
-                  <CreditCard className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="text-xs font-medium text-zinc-300">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/80">
+                  <CreditCard className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-medium text-foreground">
                     {user.creditsBalance} credits
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center text-xs font-semibold text-white">
+                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-primary-foreground">
                     {userInitials}
                   </div>
-                  <span className="text-sm text-zinc-400 hidden lg:inline">
+                  <span className="text-sm text-muted-foreground hidden lg:inline">
                     {user.email}
                   </span>
                 </div>
@@ -63,7 +63,7 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 px-2.5"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 px-2.5"
                 onClick={handleLogout}
               >
                 <LogOut className="w-4 h-4" />
@@ -73,7 +73,7 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
             <Button
               variant="ghost"
               size="sm"
-              className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 gap-1.5"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 gap-1.5"
               onClick={handleLoginRedirect}
             >
               <User className="w-4 h-4" />
@@ -83,7 +83,7 @@ export default function DashboardHeader({ sidebarOpen, setSidebarOpen }) {
           <Button
             variant="ghost"
             size="sm"
-            className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 w-8 p-0 hidden sm:flex"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 w-8 p-0 hidden sm:flex"
           >
             <HelpCircle className="w-4 h-4" />
           </Button>

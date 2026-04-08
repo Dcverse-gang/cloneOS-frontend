@@ -1,6 +1,8 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MotionConfig } from 'motion/react';
 import { Toaster } from '../components/ui/toaster';
+import { ThemeProvider } from './ThemeProvider';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -18,10 +20,14 @@ const queryClient = new QueryClient({
 
 export const QueryProvider = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <MotionConfig reducedMotion="user">
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster />
+        </QueryClientProvider>
+      </MotionConfig>
+    </ThemeProvider>
   );
 };
 

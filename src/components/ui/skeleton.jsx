@@ -1,12 +1,9 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-function Skeleton({
-  className,
-  ...props
-}) {
+function Skeleton({ className, ...props }) {
   return (
     <div
-      className={cn("rounded-md bg-zinc-800 relative overflow-hidden", className)}
+      className={cn("rounded-md bg-muted relative overflow-hidden", className)}
       {...props}
     >
       <div className="skeleton-shimmer" />
@@ -14,4 +11,4 @@ function Skeleton({
   );
 }
 
-export { Skeleton }
+export { Skeleton };

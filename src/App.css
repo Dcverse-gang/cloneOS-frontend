@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 /* Hide injected third-party badges */
 #emergent-badge,
@@ -15,33 +15,97 @@ a[href*="emergent"] {
 }
 
 :root {
-  --bg-primary: #09090b;
-  --bg-secondary: #18181b;
-  --bg-elevated: #27272a;
-  --bg-surface: #1c1c1f;
-  --border-default: #27272a;
-  --border-hover: #3f3f46;
-  --border-subtle: #1f1f23;
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
-  --accent-muted: rgba(139, 92, 246, 0.1);
-  --accent-glow: rgba(139, 92, 246, 0.15);
-  --success: #22c55e;
-  --success-muted: rgba(34, 197, 94, 0.1);
-  --warning: #f59e0b;
-  --warning-muted: rgba(245, 158, 11, 0.1);
-  --destructive: #ef4444;
-  --destructive-muted: rgba(239, 68, 68, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --bg-primary: #f6f7fb;
+  --bg-secondary: #ffffff;
+  --bg-elevated: #f1f3f9;
+  --bg-surface: #ffffff;
+  --border-default: #e8eaef;
+  --border-hover: #d8dce4;
+  --border-subtle: #f0f2f7;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --accent-muted: rgba(249, 115, 22, 0.12);
+  --accent-glow: rgba(249, 115, 22, 0.2);
+  --success: #16a34a;
+  --success-muted: rgba(22, 163, 74, 0.12);
+  --warning: #d97706;
+  --warning-muted: rgba(217, 119, 6, 0.12);
+  --destructive: #dc2626;
+  --destructive-muted: rgba(220, 38, 38, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --gradient-cta: linear-gradient(135deg, #ff8c5e 0%, #ff7eb3 100%);
+  --gradient-page-mesh:
+    radial-gradient(
+      ellipse 900px 520px at 8% -8%,
+      rgba(255, 200, 170, 0.45),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 720px 440px at 96% 4%,
+      rgba(220, 200, 255, 0.35),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 640px 380px at 48% 102%,
+      rgba(255, 210, 230, 0.28),
+      transparent 48%
+    );
+  --glass-header: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.55);
+}
+
+.dark {
+  --gradient-cta: linear-gradient(135deg, #ff9f70 0%, #ff7eb3 100%);
+  --bg-primary: #0b0e14;
+  --bg-secondary: #151921;
+  --bg-elevated: #1c222d;
+  --bg-surface: #161b22;
+  --border-default: #2d3139;
+  --border-hover: #3d4450;
+  --border-subtle: #1a1f27;
+  --text-primary: #ededed;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #ff9f70;
+  --accent-hover: #ff8c5e;
+  --accent-muted: rgba(255, 159, 112, 0.14);
+  --accent-glow: rgba(255, 140, 94, 0.22);
+  --success: #34d399;
+  --success-muted: rgba(52, 211, 153, 0.14);
+  --warning: #fbbf24;
+  --warning-muted: rgba(251, 191, 36, 0.14);
+  --destructive: #f87171;
+  --destructive-muted: rgba(248, 113, 113, 0.14);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --gradient-page-mesh:
+    radial-gradient(
+      ellipse 880px 500px at 12% -6%,
+      rgba(255, 120, 80, 0.14),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 700px 420px at 92% 8%,
+      rgba(130, 100, 220, 0.12),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 560px 360px at 50% 100%,
+      rgba(70, 200, 180, 0.06),
+      transparent 48%
+    );
+  --glass-header: rgba(11, 14, 20, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.06);
 }
 
 /* ===== Global ===== */
@@ -56,7 +120,7 @@ html {
 }
 
 ::selection {
-  background: rgba(139, 92, 246, 0.3);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
   color: var(--text-primary);
 }
 
@@ -65,17 +129,29 @@ html {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: var(--gradient-page-mesh);
+  background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 /* ===== Dashboard Shell ===== */
 .dcverse-dashboard {
   min-height: 100vh;
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: var(--gradient-page-mesh);
+  background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   position: relative;
 }
 
@@ -87,8 +163,9 @@ html {
 }
 
 .create-clone-header {
-  background: rgba(9, 9, 11, 0.8);
-  backdrop-filter: blur(16px);
+  background: var(--glass-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-default);
   padding: 0.75rem 1.5rem;
   position: sticky;
@@ -161,8 +238,10 @@ html {
   flex-direction: column;
   gap: 1.5rem;
   padding: 1.25rem;
-  border-radius: 12px;
-  background: rgba(24, 24, 27, 0.6);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-default);
 }
 
@@ -178,16 +257,18 @@ html {
   gap: 0.75rem;
   padding: 0.5rem 0;
   border-radius: 8px;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .create-clone-step-item:hover {
-  background: rgba(139, 92, 246, 0.08);
+  background: var(--accent-muted);
 }
 
 .create-clone-step-item.active .create-clone-step-num {
-  background: rgba(139, 92, 246, 0.3);
-  color: rgb(196, 181, 253);
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--accent);
 }
 
 .create-clone-step-item.active .create-clone-step-label {
@@ -231,9 +312,9 @@ html {
 
 /* ===== Header ===== */
 .dashboard-header {
-  background: rgba(9, 9, 11, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--glass-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-default);
   padding: 0;
   position: sticky;
@@ -265,7 +346,7 @@ html {
 }
 
 .logo-text {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--text-primary);
@@ -282,7 +363,7 @@ html {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.8125rem;
   font-weight: 500;
   transition: all 0.15s ease;
@@ -329,7 +410,9 @@ html {
   height: calc(100vh - 56px);
   overflow-y: auto;
   overflow-x: hidden;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s ease;
   flex-shrink: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--border-default) transparent;
@@ -394,7 +477,7 @@ html {
 }
 
 .sidebar-title {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.6875rem;
   color: var(--text-muted);
@@ -430,7 +513,7 @@ html {
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.8125rem;
   font-weight: 500;
   text-align: left;
@@ -455,7 +538,7 @@ html {
 }
 
 .footer-title {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.6875rem;
   color: var(--text-muted);
@@ -496,7 +579,7 @@ html {
 }
 
 .section-title {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 1.25rem;
   color: var(--text-primary);
@@ -507,7 +590,7 @@ html {
   background: var(--accent) !important;
   color: white !important;
   border: none !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.8125rem;
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -626,7 +709,7 @@ html {
 }
 
 .actor-name {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--text-primary);
@@ -646,7 +729,7 @@ html {
 }
 
 .price {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   color: var(--accent);
 }
@@ -660,7 +743,7 @@ html {
   background: var(--accent);
   color: white;
   border: none;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   border-radius: var(--radius-md);
@@ -686,7 +769,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   padding: 0.5rem 1.5rem;
@@ -708,7 +791,7 @@ html {
 }
 
 .subsection-title {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 1rem;
   color: var(--text-primary);
@@ -739,7 +822,7 @@ html {
 }
 
 .selected-actor-name {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -777,7 +860,7 @@ html {
 }
 
 .customization-section h5 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.8125rem;
   color: var(--text-secondary);
@@ -857,7 +940,7 @@ html {
   background: transparent;
   border: 1px solid var(--destructive);
   color: var(--destructive);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -875,7 +958,7 @@ html {
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -893,7 +976,7 @@ html {
 .outfit-tabs .tabsTrigger {
   background: transparent;
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.8125rem;
 }
 
@@ -912,7 +995,7 @@ html {
 .credits-badge {
   background: var(--accent);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -921,7 +1004,7 @@ html {
 .lock-add-btn {
   background: var(--accent);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   border-radius: var(--radius-md);
@@ -941,7 +1024,7 @@ html {
 .next-section-btn {
   background: var(--accent);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   padding: 0.625rem 1.5rem;
@@ -987,7 +1070,7 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
   border: 1.5px solid var(--border-default);
@@ -1011,7 +1094,7 @@ html {
 }
 
 .phase-step-label {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 500;
@@ -1051,7 +1134,7 @@ html {
 }
 
 .prompt-collapsed-label {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -1074,7 +1157,7 @@ html {
   flex-shrink: 0;
   border-color: var(--border-default);
   color: var(--text-muted);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -1099,7 +1182,7 @@ html {
 
 .restart-btn {
   color: var(--text-muted);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -1118,7 +1201,7 @@ html {
   gap: 4px;
   background: var(--success);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1166,7 +1249,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   border-radius: var(--radius-md);
@@ -1185,7 +1268,7 @@ html {
 }
 
 .script-divider::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 0;
@@ -1198,7 +1281,7 @@ html {
   background: var(--bg-secondary);
   padding: 0 0.75rem;
   color: var(--text-muted);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   position: relative;
@@ -1214,7 +1297,7 @@ html {
   background: var(--bg-primary) !important;
   border: 1px solid var(--border-default) !important;
   color: var(--text-primary) !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.875rem;
   resize: vertical;
   min-height: 160px;
@@ -1235,7 +1318,7 @@ html {
 .generate-storyboard-btn {
   background: var(--accent) !important;
   color: white !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   padding: 0.625rem 1.75rem;
@@ -1311,7 +1394,7 @@ html {
 }
 
 .frame-info h4 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 0.375rem 0;
@@ -1335,7 +1418,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 500;
   padding: 0.375rem 0.625rem;
@@ -1360,7 +1443,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   padding: 0.5rem 1.25rem;
@@ -1377,7 +1460,7 @@ html {
 .proceed-video-btn {
   background: var(--accent);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.8125rem;
   padding: 0.5rem 1.25rem;
@@ -1424,7 +1507,7 @@ html {
 }
 
 .model-header h3 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -1433,7 +1516,7 @@ html {
 .recommended-badge {
   background: var(--accent);
   color: white;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -1456,7 +1539,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-muted);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 500;
   border-radius: var(--radius-sm);
@@ -1470,7 +1553,7 @@ html {
 .generate-video-btn {
   background: var(--accent) !important;
   color: white !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.9375rem;
   padding: 0.75rem 2rem;
@@ -1497,7 +1580,7 @@ html {
 }
 
 .video-preview-section h3 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 1rem;
@@ -1538,7 +1621,7 @@ html {
   background: transparent;
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.8125rem;
   padding: 0.5rem 1.25rem;
@@ -1668,7 +1751,7 @@ html {
 
 /* ===== Toast ===== */
 [data-sonner-toaster] {
-  font-family: 'Inter', system-ui, sans-serif !important;
+  font-family: "Inter", system-ui, sans-serif !important;
 }
 
 [data-sonner-toast] {
@@ -1735,24 +1818,39 @@ html {
 }
 
 .ui-button {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 500;
 }
 
 /* ===== Animations ===== */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse-accent {
-  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
-  50% { box-shadow: 0 0 0 6px transparent; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
 }
 
 .dashboard-section {
@@ -1775,9 +1873,9 @@ html {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.04) 20%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 80%,
+    color-mix(in srgb, var(--text-primary) 4%, transparent) 20%,
+    color-mix(in srgb, var(--text-primary) 9%, transparent) 50%,
+    color-mix(in srgb, var(--text-primary) 4%, transparent) 80%,
     transparent 100%
   );
   animation: shimmer 1.8s ease-in-out infinite;
@@ -1804,9 +1902,11 @@ button:active:not(:disabled) {
 
 .app-shell {
   min-height: 100vh;
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: var(--gradient-page-mesh);
+  background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   display: flex;
   flex-direction: column;
 }
@@ -1814,9 +1914,9 @@ button:active:not(:disabled) {
 /* ----- App Header ----- */
 .app-header {
   height: 56px;
-  background: rgba(9, 9, 11, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--glass-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-default);
   position: sticky;
   top: 0;
@@ -1871,12 +1971,22 @@ button:active:not(:disabled) {
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.625rem;
-  background: rgba(39, 39, 42, 0.5);
+  background: color-mix(in srgb, var(--bg-secondary) 65%, transparent);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.app-theme-toggle {
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+}
+
+.app-theme-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
 }
 
 .app-user-badge {
@@ -1889,13 +1999,13 @@ button:active:not(:disabled) {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--gradient-cta);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 600;
-  color: white;
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -1958,9 +2068,21 @@ button:active:not(:disabled) {
   transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.app-sidebar::-webkit-scrollbar { width: 3px; }
-.app-sidebar::-webkit-scrollbar-track { background: transparent; }
-.app-sidebar::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+/* Motion drives transform on mobile; avoid fighting spring */
+.app-sidebar.app-sidebar--motion {
+  transition: none;
+}
+
+.app-sidebar::-webkit-scrollbar {
+  width: 3px;
+}
+.app-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
 
 .app-sidebar-inner {
   padding: 1.25rem 0.75rem;
@@ -2328,7 +2450,7 @@ button:active:not(:disabled) {
 .cv-actor-selected-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(139, 92, 246, 0.25);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2554,7 +2676,6 @@ button:active:not(:disabled) {
 
 .vv-card:hover {
   border-color: var(--border-hover);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
 
@@ -2595,7 +2716,7 @@ button:active:not(:disabled) {
   right: 0.5rem;
   width: 28px;
   height: 28px;
-  background: rgba(139, 92, 246, 0.9);
+  background: color-mix(in srgb, var(--accent) 92%, #1a1a1a);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2616,9 +2737,18 @@ button:active:not(:disabled) {
   text-transform: capitalize;
 }
 
-.vv-status-completed { background: rgba(16, 185, 129, 0.85); color: white; }
-.vv-status-processing { background: rgba(59, 130, 246, 0.85); color: white; }
-.vv-status-draft { background: rgba(63, 63, 70, 0.9); color: var(--text-secondary); }
+.vv-status-completed {
+  background: rgba(16, 185, 129, 0.85);
+  color: white;
+}
+.vv-status-processing {
+  background: rgba(59, 130, 246, 0.85);
+  color: white;
+}
+.vv-status-draft {
+  background: rgba(63, 63, 70, 0.9);
+  color: var(--text-secondary);
+}
 
 .vv-card-info {
   padding: 0.875rem;
@@ -2721,17 +2851,37 @@ button:active:not(:disabled) {
    VIDEO DETAIL MODAL
    ============================================================ */
 
+/* Matches .app-header height — keeps tall modals below the bar + gap */
 .vv-modal {
-  background: #09090b;
+  --vv-modal-header-clearance: 56px;
+  --vv-modal-gap-top: 0.75rem;
+  --vv-modal-gap-bottom: 1rem;
+  --vv-modal-gap-x: 1rem;
+  background: var(--bg-primary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  max-width: min(960px, 92vw);
-  width: 100%;
-  max-height: 90vh;
+  width: min(960px, calc(100vw - 2 * var(--vv-modal-gap-x))) !important;
+  max-width: min(960px, calc(100vw - 2 * var(--vv-modal-gap-x))) !important;
+  /* Never taller than the band below the app header (full-height no longer hugs y=0) */
+  max-height: calc(
+    100dvh - var(--vv-modal-header-clearance) - var(--vv-modal-gap-top) -
+      var(--vv-modal-gap-bottom)
+  ) !important;
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  /* Center inside viewport band below sticky header (not under top: 0) */
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(
+    var(--vv-modal-header-clearance) + var(--vv-modal-gap-top)
+  ) !important;
+  bottom: var(--vv-modal-gap-bottom) !important;
+  margin: auto !important;
+  height: fit-content;
+  transform: none !important;
 }
 
 .vv-modal-header {
@@ -2783,7 +2933,42 @@ button:active:not(:disabled) {
   gap: 1.75rem;
 }
 
-.vv-modal-section { display: flex; flex-direction: column; gap: 0.75rem; }
+/* Storyboard view lightbox: below sticky header, centered in viewport band (wider than .vv-modal) */
+.storyboard-view-dialog {
+  --sb-modal-header-clearance: 56px;
+  --sb-modal-gap-top: 0.75rem;
+  --sb-modal-gap-bottom: 1rem;
+  --sb-modal-gap-x: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  width: min(1200px, calc(100vw - 2 * var(--sb-modal-gap-x))) !important;
+  max-width: min(1200px, calc(100vw - 2 * var(--sb-modal-gap-x))) !important;
+  max-height: calc(
+    100dvh - var(--sb-modal-header-clearance) - var(--sb-modal-gap-top) -
+      var(--sb-modal-gap-bottom)
+  ) !important;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(
+    var(--sb-modal-header-clearance) + var(--sb-modal-gap-top)
+  ) !important;
+  bottom: var(--sb-modal-gap-bottom) !important;
+  margin: auto !important;
+  height: fit-content;
+  transform: none !important;
+}
+
+.vv-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
 .vv-modal-section-title {
   display: flex;
@@ -3025,13 +3210,20 @@ button:active:not(:disabled) {
   flex-direction: column;
   justify-content: center;
   padding: 3rem;
-  background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1025 50%, var(--bg-primary) 100%);
+  background:
+    var(--gradient-page-mesh),
+    linear-gradient(
+      135deg,
+      var(--bg-primary) 0%,
+      color-mix(in srgb, var(--accent) 12%, var(--bg-primary)) 50%,
+      var(--bg-primary) 100%
+    );
   position: relative;
   overflow: hidden;
 }
 
 .auth-branding::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 20%;
   left: 50%;
@@ -3050,7 +3242,7 @@ button:active:not(:disabled) {
 }
 
 .auth-branding h1 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 700;
   font-size: 2.5rem;
   letter-spacing: -0.03em;
@@ -3124,7 +3316,7 @@ button:active:not(:disabled) {
 }
 
 .auth-form-container h2 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 700;
   font-size: 1.5rem;
   letter-spacing: -0.02em;
@@ -3158,7 +3350,7 @@ button:active:not(:disabled) {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 0.875rem;
   transition: border-color 0.15s ease;
   outline: none;
@@ -3180,7 +3372,7 @@ button:active:not(:disabled) {
   color: white;
   border: none;
   border-radius: var(--radius-md);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -3276,7 +3468,7 @@ button:active:not(:disabled) {
   justify-content: space-between;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(255,255,255,0.02);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .vv-modal-scene-num {
@@ -3381,9 +3573,9 @@ button:active:not(:disabled) {
 }
 
 .vv-modal-scene-img-label.sketch {
-  background: rgba(139, 92, 246, 0.1);
+  background: var(--accent-muted);
   color: var(--accent);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .vv-modal-scene-img {
@@ -3484,7 +3676,9 @@ button:active:not(:disabled) {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-default);
   opacity: 0.45;
-  transition: opacity 0.2s, background 0.2s;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
 }
 
 .vv-regen-step:last-child {
@@ -3634,15 +3828,15 @@ button:active:not(:disabled) {
   align-items: center;
   gap: 0.625rem;
   padding: 0.6rem 1rem;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: var(--accent-muted);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
   border-radius: var(--radius-md);
   font-size: 0.82rem;
-  color: #a5b4fc;
+  color: var(--accent);
   margin-bottom: 1rem;
 }
 
 .cv-regen-banner svg {
   flex-shrink: 0;
-  color: #818cf8;
+  color: var(--accent-hover);
 }

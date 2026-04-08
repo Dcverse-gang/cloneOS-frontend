@@ -1,38 +1,54 @@
-import React, { useState } from 'react';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Skeleton } from '../../../components/ui/skeleton';
-import { Check, User, ArrowRight, Loader } from 'lucide-react';
-import { useGetAllActors } from '../../../services/actor.service';
-import { useCreateProject } from '../../../services/project.service';
-import { useUser } from '../../../store/auth.store';
-import { useToast } from '../../../hooks/use-toast';
+import React, { useState } from "react";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Skeleton } from "../../../components/ui/skeleton";
+import { Check, User, ArrowRight, Loader } from "lucide-react";
+import { useGetAllActors } from "../../../services/actor.service";
+import { useCreateProject } from "../../../services/project.service";
+import { useUser } from "../../../store/auth.store";
+import { useToast } from "../../../hooks/use-toast";
 
 export default function VideoNameStep({ onCreated }) {
   const user = useUser();
   const { toast } = useToast();
-  const [videoName, setVideoName] = useState('');
+  const [videoName, setVideoName] = useState("");
   const [selectedActorId, setSelectedActorId] = useState(null);
   const { data: actors = [], isLoading: loadingActors } = useGetAllActors();
-  const { mutateAsync: createProject, isPending: creating } = useCreateProject();
+  const { mutateAsync: createProject, isPending: creating } =
+    useCreateProject();
 
   const handleNext = async () => {
     if (!videoName.trim()) {
-      toast({ title: 'Name required', description: 'Enter a name for your video.', variant: 'destructive' });
+      toast({
+        title: "Name required",
+        description: "Enter a name for your video.",
+        variant: "destructive",
+      });
       return;
     }
     if (!selectedActorId) {
-      toast({ title: 'Select an actor', description: 'Pick an actor before continuing.', variant: 'destructive' });
+      toast({
+        title: "Select an actor",
+        description: "Pick an actor before continuing.",
+        variant: "destructive",
+      });
       return;
     }
     try {
-      const result = await createProject({ projectName: videoName.trim(), actorId: selectedActorId });
+      const result = await createProject({
+        projectName: videoName.trim(),
+        actorId: selectedActorId,
+      });
       const projectId = result?.data?.id;
-      if (!projectId) throw new Error('No project ID returned');
+      if (!projectId) throw new Error("No project ID returned");
       onCreated(projectId, selectedActorId, videoName.trim());
     } catch (err) {
-      toast({ title: 'Failed to start', description: err?.message || 'Please try again.', variant: 'destructive' });
+      toast({
+        title: "Failed to start",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -40,19 +56,23 @@ export default function VideoNameStep({ onCreated }) {
     <div className="cv-step-container">
       <div className="cv-step-header">
         <h2 className="cv-step-title">New Video</h2>
-        <p className="cv-step-desc">Name your video and pick the actor who will appear in it.</p>
+        <p className="cv-step-desc">
+          Name your video and pick the actor who will appear in it.
+        </p>
       </div>
 
       <div className="cv-step-body">
         {/* Video name */}
         <div className="cv-field">
-          <Label htmlFor="video-name" className="cv-label">Video name</Label>
+          <Label htmlFor="video-name" className="cv-label">
+            Video name
+          </Label>
           <Input
             id="video-name"
             placeholder="e.g. Product Launch Promo"
             value={videoName}
             onChange={(e) => setVideoName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+            onKeyDown={(e) => e.key === "Enter" && handleNext()}
             className="cv-input"
             autoFocus
           />
@@ -72,26 +92,34 @@ export default function VideoNameStep({ onCreated }) {
             </div>
           ) : actors.length === 0 ? (
             <div className="cv-empty-actors">
-              <User className="w-8 h-8 text-zinc-600 mb-2" />
+              <User className="w-8 h-8 text-muted-foreground mb-2" />
               <p>No actors available</p>
             </div>
           ) : (
             <div className="cv-actors-grid">
               {actors.map((actor) => {
-                const imgSrc = actor.avatarUrl || actor.imageUrl || actor.avatar_url || '';
+                const imgSrc =
+                  actor.avatarUrl || actor.imageUrl || actor.avatar_url || "";
                 const isSelected = selectedActorId === actor.id;
                 return (
                   <button
                     key={actor.id}
                     type="button"
                     onClick={() => setSelectedActorId(actor.id)}
-                    className={`cv-actor-card${isSelected ? ' selected' : ''}`}
+                    className={`cv-actor-card${isSelected ? " selected" : ""}`}
                   >
                     <div className="cv-actor-img-wrap">
                       {imgSrc ? (
-                        <img src={imgSrc} alt={actor.name} className="cv-actor-img" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <img
+                          src={imgSrc}
+                          alt={actor.name}
+                          className="cv-actor-img"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
                       ) : (
-                        <User className="w-8 h-8 text-zinc-500" />
+                        <User className="w-8 h-8 text-muted-foreground" />
                       )}
                       {isSelected && (
                         <div className="cv-actor-selected-overlay">
