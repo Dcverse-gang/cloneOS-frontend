@@ -24,6 +24,11 @@ const STEPS = [
 
 function deriveStepFromProject(project) {
   if (!project?.scenes?.length) return 1;
+  // If video is rendering or done, go to the generation step
+  if (project.status === "processing" || project.status === "completed") return 2;
+  // If scenes have final images, go to generation step
+  const hasFinalImages = project.scenes.some((s) => s.finalImageUrl);
+  if (hasFinalImages) return 2;
   return 1;
 }
 
