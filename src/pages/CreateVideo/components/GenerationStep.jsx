@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { Skeleton } from "../../../components/ui/skeleton";
@@ -14,6 +14,7 @@ import {
 import {
   useGetProjectById,
   useRenderVideo,
+  projectApi,
 } from "../../../services/project.service";
 import { useToast } from "../../../hooks/use-toast";
 
@@ -26,33 +27,75 @@ export default function GenerationStep({
   const { toast } = useToast();
   const [videoUrl, setVideoUrl] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const pollRef = useRef(null);
 
-  const { data: project, isLoading: isLoadingProject } =
+  const { data: project, isLoading: isLoadingProject, refetch } =
     useGetProjectById(projectId);
   const { mutateAsync: renderVideo } = useRenderVideo();
 
   useEffect(() => {
-    if (project?.storageUrl) setVideoUrl(project.storageUrl);
-    else setVideoUrl(null);
+    if (project?.storageUrl) {
+      setVideoUrl(project.storageUrl);
+      if (isGenerating) setIsGenerating(false);
+    } else {
+      setVideoUrl(null);
+    }
   }, [project]);
+
+  // If project is in "processing" state on mount, resume polling
+  useEffect(() => {
+    if (project?.status === "processing" && !pollRef.current) {
+      setIsGenerating(true);
+      startPolling();
+    }
+    return () => stopPolling();
+  }, [project?.status, projectId]);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    const api = projectApi();
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await api.getProjectById(projectId);
+        const p = res.data?.data ?? res.data;
+        if (p?.status === "completed" && p?.storageUrl) {
+          setVideoUrl(p.storageUrl);
+          setIsGenerating(false);
+          stopPolling();
+          refetch();
+          toast({ title: "Video ready", description: "Your video has been generated." });
+        } else if (p?.status === "draft") {
+          setIsGenerating(false);
+          stopPolling();
+          toast({ title: "Rendering failed", description: "Something went wrong. Please try again.", variant: "destructive" });
+        }
+      } catch {
+        // keep polling on transient errors
+      }
+    }, 5000);
+  };
 
   const handleGenerateVideo = async () => {
     if (!projectId) return;
     setIsGenerating(true);
     try {
       const actorId = project?.actorId;
-      if (actorId) {
-        const result = await renderVideo({ projectId, actorId });
-        if (result?.data?.videoUrl) {
-          setVideoUrl(result.data.videoUrl);
-          setIsGenerating(false);
-          toast({
-            title: "Video ready",
-            description: "Your video has been generated.",
-          });
-          return;
-        }
+      if (!actorId) {
+        setIsGenerating(false);
+        toast({ title: "No actor selected", description: "Please select an actor first.", variant: "destructive" });
+        return;
       }
+
+      await renderVideo({ projectId, actorId });
+      toast({ title: "Rendering started", description: "Your video is being generated. This may take a few minutes." });
+      startPolling();
     } catch (err) {
       const status = err?.response?.status;
       const message = err?.response?.data?.error || err?.message;
@@ -68,18 +111,9 @@ export default function GenerationStep({
         window.dispatchEvent(new CustomEvent("openBuyCredits"));
         return;
       }
-      // Other errors: fall back to sample
-    }
-    setTimeout(() => {
-      const sampleUrl =
-        "https://customer-assets.emergentagent.com/job_virtual-actor/artifacts/r3dkm2v5_TeraMeraPyar-Ai%20Salman.mp4";
-      setVideoUrl(sampleUrl);
       setIsGenerating(false);
-      toast({
-        title: "Video ready",
-        description: "Video generated successfully!",
-      });
-    }, 3000);
+      toast({ title: "Rendering failed", description: message || "Something went wrong. Please try again.", variant: "destructive" });
+    }
   };
 
   if (isLoadingProject) {
@@ -129,12 +163,14 @@ export default function GenerationStep({
               )}
             </div>
             <h3 className="text-sm font-semibold text-foreground mb-1">
-              {videoUrl ? "Video generated!" : "Ready to generate"}
+              {videoUrl ? "Video generated!" : isGenerating ? "Generating video..." : "Ready to generate"}
             </h3>
             <p className="text-xs text-muted-foreground mb-5">
               {videoUrl
                 ? "Your video is ready. Watch it below or regenerate anytime."
-                : "Render your finalized storyboard into a video."}
+                : isGenerating
+                  ? "This may take a few minutes. You can stay on this page or come back later."
+                  : "Render your finalized storyboard into a video."}
             </p>
             <Button
               className="btn-gradient-primary font-semibold px-6 h-10 gap-2 rounded-lg transition-colors"
@@ -169,10 +205,14 @@ export default function GenerationStep({
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 px-4">
                   <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
-                    <Play className="w-6 h-6 text-muted-foreground" />
+                    {isGenerating ? (
+                      <Loader className="w-6 h-6 text-primary animate-spin" />
+                    ) : (
+                      <Play className="w-6 h-6 text-muted-foreground" />
+                    )}
                   </div>
                   <p className="text-muted-foreground text-sm">
-                    Video will appear here after generation
+                    {isGenerating ? "Rendering in progress..." : "Video will appear here after generation"}
                   </p>
                 </div>
               )}
