@@ -269,7 +269,7 @@ export default function UploadScriptSection({
   const handleGenerateImages = async () => {
     if (!selectedProjectId) return;
     try {
-      const res = await generateImages(selectedProjectId);
+      const res = await generateImages({ projectId: selectedProjectId, force: true });
       const newFrames = parseScenes(res);
       setFrames(newFrames);
       setPhase(PHASE.IMAGES);

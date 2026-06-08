@@ -35,15 +35,15 @@ export const projectApi = () => {
     authAxios.post(`${prefix}/${projectId}/sketches`);
 
   // Generate final photorealistic images
-  const generateImages = async (projectId) => 
-    authAxios.post(`${prefix}/${projectId}/images`);
+  const generateImages = async (projectId, force = false) =>
+    authAxios.post(`${prefix}/${projectId}/images${force ? '?force=true' : ''}`);
 
   // Regenerate a specific scene
-  const regenerateScene = async (sceneId, prompt) => 
+  const regenerateScene = async (sceneId, prompt) =>
     authAxios.post(`${prefix}/scenes/${sceneId}/regenerate`, { prompt });
 
   // Render final video
-  const renderVideo = async (projectId, actorId) => 
+  const renderVideo = async (projectId, actorId) =>
     authAxios.post(`${prefix}/${projectId}/render`, { actorId });
 
   // Upload user-provided storyboard sketches (multipart, field name: sketches)
@@ -192,8 +192,8 @@ export function useGenerateImages(options = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (projectId) => 
-      generateImages(projectId).then(res => res.data),
+    mutationFn: ({ projectId, force = false }) =>
+      generateImages(projectId, force).then(res => res.data),
     onSuccess: (data, projectId) => {
       // Invalidate the project to get updated scenes with final images
       queryClient.invalidateQueries({ 

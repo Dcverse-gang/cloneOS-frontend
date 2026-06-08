@@ -194,7 +194,7 @@ export default function ScriptStep({ projectId, onBack, onProceedToVideo, regenP
 
   const handleGenerateImages = async () => {
     try {
-      const res = await generateImages(projectId);
+      const res = await generateImages({ projectId, force: true });
       const newFrames = parseScenes(res);
       setFrames(newFrames);
       setPhase(PHASE.IMAGES);
