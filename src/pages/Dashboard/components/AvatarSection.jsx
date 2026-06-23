@@ -180,7 +180,7 @@ function AvatarCard({ actor, isSelected, onSelect }) {
       <CardContent className="actor-card-content">
         <div className="actor-image">
           {actor.avatarUrl ? (
-            <img src={"https://i.pinimg.com/736x/3d/70/41/3d704151eebcdb14b129c0fead905fbb.jpg" ?? actor.avatarUrl} alt={actor.name} />
+            <img src={actor.avatarUrl} alt={actor.name} />
           ) : (
             <div className="placeholder-image">
               <User className="w-12 h-12" />
